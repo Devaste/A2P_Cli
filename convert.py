@@ -1,4 +1,5 @@
 import argparse
+import pillow_avif  # noqa: F401
 from pathlib import Path
 from PIL import Image
 
