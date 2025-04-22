@@ -158,15 +158,18 @@ def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=Fal
             logging.warning(msg)
         return
     file_info = []
+    avif_to_nums = {}
     for avif_file in avif_files:
         manga, volume, chapter = parse_manga_structure(avif_file)
         numbers = extract_numbers_from_filename(avif_file.stem)
+        avif_to_nums[avif_file] = numbers
         for num in numbers:
             file_info.append((num, avif_file, manga, volume, chapter))
     file_info = [f for f in file_info if f[0] is not None]
     file_info.sort(key=lambda x: x[0])
     success = 0
     fail = 0
+    avif_success = {avif_file: True for avif_file in avif_files}
     for idx, (num, avif_file, manga, volume, chapter) in enumerate(file_info):
         manga_str = manga or "manga"
         volume_str = str(volume).zfill(3) if volume else "000"
@@ -179,11 +182,15 @@ def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=Fal
             png_file = output_path / new_name
         converted = convert_single_image(avif_file, png_file, silent, log=log)
         if converted:
-            if replace:
-                remove_original_file(avif_file)
             success += 1
         else:
             fail += 1
+            avif_success[avif_file] = False
+    # Only remove originals if ALL conversions for that file succeeded
+    if replace:
+        for avif_file, ok in avif_success.items():
+            if ok:
+                remove_original_file(avif_file)
     summary = f"Done: {success} converted, {fail} failed." if silent else f"Conversion finished. Success: {success}, Failed: {fail}"
     print(summary)
     if log:
