@@ -2,6 +2,7 @@ import argparse
 import pillow_avif  # noqa: F401
 from pathlib import Path
 from PIL import Image
+import numpy as np
 
 def is_greyscale(img):
     """Check if a PIL Image is greyscale."""
@@ -12,6 +13,28 @@ def is_greyscale(img):
         bands = rgb.split()
         return all(bands[0].tobytes() == bands[i].tobytes() for i in range(1, 3))
     return False
+
+def is_greyscale_plus_one_color(img, tolerance=5, min_color_pixels=0.01):
+    """
+    Check if the image is mostly greyscale with a single dominant color (e.g., blue or red highlights).
+    Returns (True, color) if so, else (False, None).
+    """
+    rgb = img.convert("RGB")
+    arr = np.array(rgb)
+    r, g, b = arr[:,:,0], arr[:,:,1], arr[:,:,2]
+    greyscale_mask = (np.abs(r-g) < tolerance) & (np.abs(r-b) < tolerance) & (np.abs(g-b) < tolerance)
+    total_pixels = arr.shape[0] * arr.shape[1]
+    color_pixels = total_pixels - np.sum(greyscale_mask)
+    if color_pixels / total_pixels < min_color_pixels:
+        return False, None  # Nearly all greyscale
+    color_arr = arr[~greyscale_mask]
+    if len(color_arr) == 0:
+        return False, None
+    # Find dominant color channel
+    color_sums = np.sum(color_arr, axis=0)
+    dominant = np.argmax(color_sums)
+    color_map = {0: "red", 1: "green", 2: "blue"}
+    return True, color_map[dominant]
 
 def quantize_4bit(img):
     """Quantize a greyscale image to 16 levels (4 bits)."""
@@ -28,7 +51,12 @@ def find_avif_files(input_path, recursive):
     return list(input_path.glob(pattern))
 
 def convert_single_image(avif_file, png_file, silent):
-    """Convert a single AVIF file to PNG, using GUI-style quantization for greyscale images."""
+    """
+    Convert a single AVIF file to PNG.
+    - Greyscale images: quantize to 16 levels (GUI logic).
+    - Greyscale+one-color: treat as color, print detected color if not silent.
+    - Full color: save as PNG.
+    """
     try:
         with Image.open(avif_file) as img:
             if is_greyscale(img):
@@ -37,9 +65,15 @@ def convert_single_image(avif_file, png_file, silent):
                 if not silent:
                     print(f"[GREYSCALE 4bit GUI] Converted: {avif_file.name} -> {png_file.name}")
             else:
-                img.save(png_file, 'PNG', optimize=True)
-                if not silent:
-                    print(f"[COLOR] Converted: {avif_file.name} -> {png_file.name}")
+                is_gs_plus_one, color = is_greyscale_plus_one_color(img)
+                if is_gs_plus_one:
+                    img.save(png_file, 'PNG', optimize=True)
+                    if not silent:
+                        print(f"[GREYSCALE+{color.upper()}] Converted: {avif_file.name} -> {png_file.name}")
+                else:
+                    img.save(png_file, 'PNG', optimize=True)
+                    if not silent:
+                        print(f"[COLOR] Converted: {avif_file.name} -> {png_file.name}")
         return True
     except Exception as e:
         if not silent:
