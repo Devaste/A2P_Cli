@@ -60,6 +60,7 @@ def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=Fal
     Convert all .avif images in a directory (optionally recursively) to .png format.
     Greyscale images are quantized to 16 levels using GUI-style logic.
     Optionally deletes originals, supports custom output dir and silent mode.
+    In recursive mode, outputs are saved to the same folder as their source files.
     """
     input_path = Path(input_dir)
     output_path = Path(output_dir) if output_dir else input_path
@@ -76,7 +77,10 @@ def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=Fal
     success = 0
     fail = 0
     for avif_file in avif_files:
-        png_file = output_path / (avif_file.stem + '.png')
+        if recursive:
+            png_file = avif_file.with_suffix('.png')
+        else:
+            png_file = output_path / (avif_file.stem + '.png')
         converted = convert_single_image(avif_file, png_file, silent)
         if converted:
             if replace:
