@@ -70,7 +70,10 @@ def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=Fal
     success = 0
     fail = 0
     for avif_file in avif_files:
-        png_file = output_path / (avif_file.stem + '.png')
+        if recursive:
+            png_file = avif_file.parent / (avif_file.stem + '.png')
+        else:
+            png_file = output_path / (avif_file.stem + '.png')
         converted = convert_single_image(avif_file, png_file, silent)
         if converted:
             if replace:
