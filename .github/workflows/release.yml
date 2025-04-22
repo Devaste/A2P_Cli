@@ -6,6 +6,9 @@ on:
       - main
       - test-features
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
