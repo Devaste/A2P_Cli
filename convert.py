@@ -3,6 +3,38 @@ import pillow_avif  # noqa: F401
 from pathlib import Path
 from PIL import Image
 import numpy as np
+import re
+
+def extract_numbers_from_filename(filename):
+    """
+    Extract all numbers or ranges from filename.
+    E.g. '098-099' -> [98, 99], '097' -> [97], '100-102' -> [100, 101, 102]
+    """
+    name = filename.rsplit('.', 1)[0]
+    # Find all number groups or ranges
+    matches = re.findall(r'(\d+)(?:-(\d+))?', name)
+    numbers = []
+    for start, end in matches:
+        if end:
+            # Range: add all numbers in range
+            numbers.extend(list(range(int(start), int(end) + 1)))
+        else:
+            numbers.append(int(start))
+    return numbers
+
+def parse_manga_structure(avif_file):
+    """
+    Given a Path to an avif_file, extract manga name, volume, chapter.
+    Assumes folder structure: manga/volume/chapter/file
+    """
+    parts = avif_file.parts
+    # Expect at least 4 levels: .../<manga>/<volume>/<chapter>/<file>
+    if len(parts) < 4:
+        return None, None, None
+    manga = parts[-4]
+    volume = parts[-3]
+    chapter = parts[-2]
+    return manga, volume, chapter
 
 def is_greyscale(img):
     """Check if a PIL Image is greyscale."""
@@ -95,6 +127,7 @@ def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=Fal
     Greyscale images are quantized to 16 levels using GUI-style logic.
     Optionally deletes originals, supports custom output dir and silent mode.
     In recursive mode, outputs are saved to the same folder as their source files.
+    Implements automatic renaming based on folder structure and file number or range.
     """
     input_path = Path(input_dir)
     output_path = Path(output_dir) if output_dir else input_path
@@ -108,13 +141,28 @@ def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=Fal
         if not silent:
             print("No .avif files found in the input directory.")
         return
+    # --- Automatic naming logic with ranges ---
+    file_info = []
+    for avif_file in avif_files:
+        manga, volume, chapter = parse_manga_structure(avif_file)
+        numbers = extract_numbers_from_filename(avif_file.stem)
+        for num in numbers:
+            file_info.append((num, avif_file, manga, volume, chapter))
+    # Sort by number (ascending)
+    file_info = [f for f in file_info if f[0] is not None]
+    file_info.sort(key=lambda x: x[0])
     success = 0
     fail = 0
-    for avif_file in avif_files:
+    for idx, (num, avif_file, manga, volume, chapter) in enumerate(file_info):
+        manga_str = manga or "manga"
+        volume_str = str(volume).zfill(3) if volume else "000"
+        chapter_str = str(chapter).zfill(3) if chapter else "000"
+        file_str = str(num).zfill(3)
+        new_name = f"{manga_str}-v{volume_str}-ch{chapter_str}-{file_str}.png"
         if recursive:
-            png_file = avif_file.with_suffix('.png')
+            png_file = avif_file.parent / new_name
         else:
-            png_file = output_path / (avif_file.stem + '.png')
+            png_file = output_path / new_name
         converted = convert_single_image(avif_file, png_file, silent)
         if converted:
             if replace:
