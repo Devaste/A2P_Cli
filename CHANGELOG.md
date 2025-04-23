@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.2] - 2025-04-23
+
+### Changed
+- Refactored convert_single_image for lower cognitive complexity and better error handling.
+- Enforced quantization bitness limits (1–8) for all qb_* flags due to PNG/PIL limitations. Added error messages and documentation links for user clarity.
+- Improved CLI help text for quantization flags to document limitations and link to PIL docs.
+
+### Fixed
+- Minor code cleanup and improved maintainability.
+
 ## [v1.1-beta] - 2025-04-23
 
 ### Added

@@ -90,7 +90,11 @@ jobs:
             TAG="v$VERSION"
             PRERELEASE=false
           else
-            TAG="v$VERSION-beta"
+            if [[ "$VERSION" == *"-beta" ]]; then
+              TAG="v$VERSION"
+            else
+              TAG="v$VERSION-beta"
+            fi
             PRERELEASE=true
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT

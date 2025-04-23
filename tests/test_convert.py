@@ -20,7 +20,7 @@ def test_basic_conversion():
         output_dir = Path(tmpdir) / "output"
         input_dir.mkdir()
         output_dir.mkdir()
-        avif_file = create_dummy_avif(input_dir / "test001.avif")
+        create_dummy_avif(input_dir / "test001.avif")
         convert_avif_to_png(str(input_dir), str(output_dir), replace=False, recursive=False, silent=True)
         png_file = output_dir / "test001.png"
         assert png_file.exists(), "PNG file was not created"
@@ -28,7 +28,7 @@ def test_basic_conversion():
 def test_replace_original():
     with tempfile.TemporaryDirectory() as tmpdir:
         input_dir = Path(tmpdir)
-        avif_file = create_dummy_avif(input_dir / "replace001.avif")
+        create_dummy_avif(input_dir / "replace001.avif")
         convert_avif_to_png(str(input_dir), None, replace=True, recursive=False, silent=True)
         png_file = input_dir / "replace001.png"
         assert png_file.exists(), "PNG file was not created"
@@ -39,7 +39,47 @@ def test_recursive():
         root = Path(tmpdir)
         sub = root / "subdir"
         sub.mkdir()
-        avif_file = create_dummy_avif(sub / "rec001.avif")
+        create_dummy_avif(sub / "rec001.avif")
         convert_avif_to_png(str(root), None, replace=False, recursive=True, silent=True)
         png_file = sub / "rec001.png"
         assert png_file.exists(), "PNG file in subdir was not created"
+
+def test_color_quantization_valid():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        input_dir = Path(tmpdir)
+        create_dummy_avif(input_dir / "color_qb4.avif", mode="RGB", color=(100, 150, 200))
+        convert_avif_to_png(str(input_dir), None, qb_color=4, silent=True)
+        png_file = input_dir / "color_qb4.png"
+        assert png_file.exists(), "PNG file was not created for qb_color=4"
+
+def test_gray_quantization_valid():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        input_dir = Path(tmpdir)
+        create_dummy_avif(input_dir / "gray_qb3.avif", mode="L", color=128)
+        convert_avif_to_png(str(input_dir), None, qb_gray=3, silent=True)
+        png_file = input_dir / "gray_qb3.png"
+        assert png_file.exists(), "PNG file was not created for qb_gray=3"
+
+def test_gray_color_quantization_valid():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        input_dir = Path(tmpdir)
+        create_dummy_avif(input_dir / "gray_color_qb2.avif", mode="L", color=200)
+        convert_avif_to_png(str(input_dir), None, qb_gray_color=2, silent=True)
+        png_file = input_dir / "gray_color_qb2.png"
+        assert png_file.exists(), "PNG file was not created for qb_gray_color=2"
+
+def test_color_quantization_invalid():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        input_dir = Path(tmpdir)
+        create_dummy_avif(input_dir / "color_qb0.avif", mode="RGB", color=(100, 150, 200))
+        convert_avif_to_png(str(input_dir), None, qb_color=0, silent=True)
+        png_file = input_dir / "color_qb0.png"
+        assert not png_file.exists(), "PNG should not be created for invalid qb_color=0"
+
+def test_gray_default_quantization():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        input_dir = Path(tmpdir)
+        create_dummy_avif(input_dir / "gray_default.avif", mode="L", color=100)
+        convert_avif_to_png(str(input_dir), None, silent=True)
+        png_file = input_dir / "gray_default.png"
+        assert png_file.exists(), "PNG file was not created for default grayscale quantization (should use 16 levels)"

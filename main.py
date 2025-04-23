@@ -11,9 +11,9 @@ def main():
     parser.add_argument('--replace', action='store_true', help='Remove original .avif files after conversion')
     parser.add_argument('--recursive', action='store_true', help='Recursively search for .avif files in subdirectories')
     parser.add_argument('--silent', action='store_true', help='No output to command line, only finishing result')
-    parser.add_argument('--qb_color', type=int, help='Quantize bitness for color images (e.g., 8 for 256 colors)')
-    parser.add_argument('--qb_gray-color', type=int, help='Quantize bitness for grayscale+one (e.g., 4 for 16 levels)')
-    parser.add_argument('--qb_gray', type=int, help='Quantize bitness for grayscale images (e.g., 4 for 16 levels)')
+    parser.add_argument('--qb_color', type=int, help='Quantize bitness for color images (1–8, i.e., 2–256 colors). Due to PNG and PIL quantize() limitations, only 1–8 are allowed. See: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.quantize')
+    parser.add_argument('--qb_gray-color', type=int, help='Quantize bitness for grayscale+one images (1–8, i.e., 2–256 levels). Due to PNG and PIL quantize() limitations, only 1–8 are allowed. See: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.quantize')
+    parser.add_argument('--qb_gray', type=int, help='Quantize bitness for grayscale images (1–8, i.e., 2–256 levels). Due to PNG and PIL quantize() limitations, only 1–8 are allowed. See: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.quantize')
     args = parser.parse_args()
     convert_avif_to_png(
         args.input_dir,

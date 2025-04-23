@@ -33,8 +33,29 @@ def save_image(img, png_file, silent, label):
         print(f"[{label}] Converted: {png_file.name}")
 
 
-def convert_single_image(avif_file, png_file, silent, qb_color=None, qb_gray_color=None, qb_gray=None):
-    """Convert a single AVIF file to PNG, using quantization flags if provided."""
+def convert_single_image(avif_file, png_file, silent, **kwargs):
+    """
+    Convert a single AVIF file to PNG, using quantization flags if provided.
+    Accepts qb_color, qb_gray_color, qb_gray as optional keyword arguments.
+    Quantization bitness is limited to 1–8 (2–256 colors/levels) due to PIL's quantize() and PNG palette limitations.
+    See PIL.Image.quantize documentation: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.quantize
+    """
+    qb_color = kwargs.pop('qb_color', None)
+    qb_gray_color = kwargs.pop('qb_gray_color', None)
+    qb_gray = kwargs.pop('qb_gray', None)
+
+    # Warn if unexpected kwargs
+    if kwargs:
+        unexpected = ', '.join(kwargs.keys())
+        print(f"Warning: Unexpected keyword arguments received: {unexpected}")
+
+    # Validate bitness limits (1–8 bits)
+    for flag, value in [('qb_color', qb_color), ('qb_gray_color', qb_gray_color), ('qb_gray', qb_gray)]:
+        if value is not None and (value < 1 or value > 8):
+            print(f"Error: {flag} must be between 1 and 8 (got {value}). This is due to PNG and PIL quantize() limitations.")
+            print("See: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.quantize")
+            return False
+
     try:
         with Image.open(avif_file) as img:
             if is_greyscale(img):
@@ -60,14 +81,13 @@ def convert_single_image(avif_file, png_file, silent, qb_color=None, qb_gray_col
             print(f"Failed to convert {avif_file.name}: {e}")
         return False
 
-def print_summary(success, fail, silent):
-    """Print a summary of the conversion results."""
-    msg = f"Done: {success} converted, {fail} failed." if silent else f"Conversion finished. Success: {success}, Failed: {fail}"
-    print(msg)
+def handle_single_conversion(avif_file, output_path, recursive, silent, replace, qb_color, qb_gray_color, qb_gray):
+    png_file = (avif_file.parent if recursive else output_path) / (avif_file.stem + '.png')
+    converted = convert_single_image(avif_file, png_file, silent, qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray)
+    if converted and replace:
+        remove_original_file(avif_file)
+    return converted
 
-def remove_original_file(avif_file):
-    """Remove the original AVIF file after conversion."""
-    avif_file.unlink()
 
 def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=False, silent=False, qb_color=None, qb_gray_color=None, qb_gray=None):
     """
@@ -101,3 +121,20 @@ def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=Fal
         else:
             fail += 1
     print_summary(success, fail, silent)
+
+
+def print_summary(success, fail, silent):
+    """Print a summary of the conversion results."""
+    msg = f"Done: {success} converted, {fail} failed." if silent else f"Conversion finished. Success: {success}, Failed: {fail}"
+    print(msg)
+
+def remove_original_file(avif_file):
+    """Remove the original AVIF file after conversion."""
+    avif_file.unlink()
+
+def check_and_prepare_dirs(input_path, output_path):
+    if not input_path.is_dir():
+        print(f"Input directory '{input_path}' does not exist.")
+        return False
+    output_path.mkdir(parents=True, exist_ok=True)
+    return True
