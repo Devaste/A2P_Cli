@@ -21,39 +21,40 @@ def find_avif_files(input_path, recursive):
     pattern = '**/*.avif' if recursive else '*.avif'
     return list(input_path.glob(pattern))
 
+def quantize_and_save(img, png_file, colors, mode, silent, label):
+    img_q = img.convert(mode).quantize(colors=colors, method=2, dither=0)
+    img_q.save(png_file, 'PNG', optimize=True)
+    if not silent:
+        print(f"[{label}] Converted: {png_file.name}")
+
+def save_image(img, png_file, silent, label):
+    img.save(png_file, 'PNG', optimize=True)
+    if not silent:
+        print(f"[{label}] Converted: {png_file.name}")
+
+
 def convert_single_image(avif_file, png_file, silent, qb_color=None, qb_gray_color=None, qb_gray=None):
     """Convert a single AVIF file to PNG, using quantization flags if provided."""
     try:
         with Image.open(avif_file) as img:
             if is_greyscale(img):
-                # Grayscale image
                 if qb_gray is not None:
-                    img_q = img.convert("L").quantize(colors=2**qb_gray, method=2, dither=0)
-                    img_q.save(png_file, 'PNG', optimize=True)
-                    if not silent:
-                        print(f"[GREYSCALE {2**qb_gray} levels] Converted: {avif_file.name} -> {png_file.name}")
-                elif qb_gray_color is not None:
-                    img_q = img.convert("L").quantize(colors=2**qb_gray_color, method=2, dither=0)
-                    img_q.save(png_file, 'PNG', optimize=True)
-                    if not silent:
-                        print(f"[GREYSCALE+ONE {2**qb_gray_color} levels] Converted: {avif_file.name} -> {png_file.name}")
-                else:
-                    img_4bit = quantize_4bit_gui(img)
-                    img_4bit.save(png_file, 'PNG', optimize=True)
-                    if not silent:
-                        print(f"[GREYSCALE 4bit GUI] Converted: {avif_file.name} -> {png_file.name}")
-            else:
-                # Color image
-                if qb_color is not None:
-                    img_q = img.convert("RGB").quantize(colors=2**qb_color, method=2, dither=0)
-                    img_q.save(png_file, 'PNG', optimize=True)
-                    if not silent:
-                        print(f"[COLOR {2**qb_color} colors] Converted: {avif_file.name} -> {png_file.name}")
-                else:
-                    img.save(png_file, 'PNG', optimize=True)
-                    if not silent:
-                        print(f"[COLOR] Converted: {avif_file.name} -> {png_file.name}")
-        return True
+                    quantize_and_save(img, png_file, 2**qb_gray, "L", silent, f"GREYSCALE {2**qb_gray} levels")
+                    return True
+                if qb_gray_color is not None:
+                    quantize_and_save(img, png_file, 2**qb_gray_color, "L", silent, f"GREYSCALE+ONE {2**qb_gray_color} levels")
+                    return True
+                img_4bit = quantize_4bit_gui(img)
+                img_4bit.save(png_file, 'PNG', optimize=True)
+                if not silent:
+                    print(f"[GREYSCALE 4bit GUI] Converted: {png_file.name}")
+                return True
+            # Color image
+            if qb_color is not None:
+                quantize_and_save(img, png_file, 2**qb_color, "RGB", silent, f"COLOR {2**qb_color} colors")
+                return True
+            save_image(img, png_file, silent, "COLOR")
+            return True
     except Exception as e:
         if not silent:
             print(f"Failed to convert {avif_file.name}: {e}")
