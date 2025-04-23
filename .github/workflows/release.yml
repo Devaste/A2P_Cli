@@ -49,7 +49,7 @@ jobs:
         if: matrix.os == 'windows-latest' && matrix.python-version == '3.13'
         run: |
           pip install pyinstaller
-          pyinstaller --onefile main.py --name A2P_Cli --icon icon.ico
+          pyinstaller --onefile main.py --name A2P_Cli --icon icon.ico --add-data "VERSION;."
 
       - name: Archive build artifacts (Windows)
         if: matrix.os == 'windows-latest' && matrix.python-version == '3.13'
