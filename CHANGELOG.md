@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0-beta] - 2025-04-23
+### Major Changes
+- Modularized CLI: menu logic, config, and helpers split into separate files.
+- Centralized all default values, option descriptions, and validators in `cli/config.py`.
+- Fully type-checked and linter-compliant conversion logic.
+- Robust, reusable input validation for all CLI options.
+- Added `method` and `dither` options for quantization and dithering control.
+- All menu and helper logic now unit tested in `tests/`.
+- Improved docstrings and code documentation throughout.
+- Project is now ready for further extension and easy maintenance.
+
+### Breaking Changes
+- CLI options and menu structure may differ from previous versions.
+- Some internal APIs have changed for consistency and extensibility.
+
 ## [v1.2] - 2025-04-23
 
 ### Changed

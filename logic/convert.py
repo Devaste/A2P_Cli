@@ -1,4 +1,8 @@
-import pillow_avif  # noqa: F401
+try:
+    import pillow_avif  # noqa: F401
+except ImportError:
+    pillow_avif = None  # For environments without AVIF support
+
 from pathlib import Path
 from PIL import Image
 
@@ -14,15 +18,17 @@ def is_greyscale(img):
 
 def quantize_4bit_gui(img):
     """Quantize a greyscale image to 16 colors using PIL's quantize (GUI logic)."""
-    return img.convert("L").quantize(colors=16, method=2, dither=0)
+    return img.convert("L").quantize(colors=16, method=2, dither=1)
 
 def find_avif_files(input_path, recursive):
     """Find all .avif files in a directory, optionally recursively."""
     pattern = '**/*.avif' if recursive else '*.avif'
     return list(input_path.glob(pattern))
 
-def quantize_and_save(img, png_file, colors, mode, silent, label):
-    img_q = img.convert(mode).quantize(colors=colors, method=2, dither=0)
+def quantize_and_save(img, png_file, colors: int, mode: str, silent: bool, label: str, **kwargs):
+    method = int(kwargs.pop('method', 2))
+    dither = int(kwargs.pop('dither', 1))
+    img_q = img.convert(mode).quantize(colors=int(colors), method=method, dither=dither)
     img_q.save(png_file, 'PNG', optimize=True)
     if not silent:
         print(f"[{label}] Converted: {png_file.name}")
@@ -43,6 +49,8 @@ def convert_single_image(avif_file, png_file, silent, **kwargs):
     qb_color = kwargs.pop('qb_color', None)
     qb_gray_color = kwargs.pop('qb_gray_color', None)
     qb_gray = kwargs.pop('qb_gray', None)
+    method = kwargs.pop('method', 2)
+    dither = kwargs.pop('dither', 1)
 
     # Warn if unexpected kwargs
     if kwargs:
@@ -60,10 +68,10 @@ def convert_single_image(avif_file, png_file, silent, **kwargs):
         with Image.open(avif_file) as img:
             if is_greyscale(img):
                 if qb_gray is not None:
-                    quantize_and_save(img, png_file, 2**qb_gray, "L", silent, f"GREYSCALE {2**qb_gray} levels")
+                    quantize_and_save(img, png_file, int(2**qb_gray), "L", silent, f"GREYSCALE {2**qb_gray} levels", method=method, dither=dither)
                     return True
                 if qb_gray_color is not None:
-                    quantize_and_save(img, png_file, 2**qb_gray_color, "L", silent, f"GREYSCALE+ONE {2**qb_gray_color} levels")
+                    quantize_and_save(img, png_file, int(2**qb_gray_color), "L", silent, f"GREYSCALE+ONE {2**qb_gray_color} levels", method=method, dither=dither)
                     return True
                 img_4bit = quantize_4bit_gui(img)
                 img_4bit.save(png_file, 'PNG', optimize=True)
@@ -72,7 +80,7 @@ def convert_single_image(avif_file, png_file, silent, **kwargs):
                 return True
             # Color image
             if qb_color is not None:
-                quantize_and_save(img, png_file, 2**qb_color, "RGB", silent, f"COLOR {2**qb_color} colors")
+                quantize_and_save(img, png_file, int(2**qb_color), "RGB", silent, f"COLOR {2**qb_color} colors", method=method, dither=dither)
                 return True
             save_image(img, png_file, silent, "COLOR")
             return True
@@ -89,18 +97,18 @@ def handle_single_conversion(avif_file, output_path, recursive, silent, replace,
     return converted
 
 
-def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=False, silent=False, qb_color=None, qb_gray_color=None, qb_gray=None):
+def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=False, silent=False, qb_color=None, qb_gray_color=None, qb_gray=None, **kwargs):
     """
     Convert all .avif images in a directory (optionally recursively) to .png format.
-    Greyscale images are quantized to 16 levels using GUI-style logic by default.
+    Greyscale images are quantized to 16 levels by default.
     Supports custom quantization via CLI flags.
     Optionally deletes originals, supports custom output dir and silent mode.
+    Accepts extra kwargs (e.g., method, dither) for advanced options.
     """
     input_path = Path(input_dir)
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input directory '{input_dir}' does not exist.")
     output_path = Path(output_dir) if output_dir else input_path
-    if not input_path.is_dir():
-        print(f"Input directory '{input_dir}' does not exist.")
-        return
     output_path.mkdir(parents=True, exist_ok=True)
     avif_files = find_avif_files(input_path, recursive)
     if not avif_files:
@@ -113,7 +121,7 @@ def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=Fal
             png_file = avif_file.parent / (avif_file.stem + '.png')
         else:
             png_file = output_path / (avif_file.stem + '.png')
-        converted = convert_single_image(avif_file, png_file, silent, qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray)
+        converted = convert_single_image(avif_file, png_file, silent, qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray, **kwargs)
         if converted:
             if replace:
                 remove_original_file(avif_file)

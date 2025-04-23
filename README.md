@@ -1,62 +1,71 @@
-# A2P_Cli
+# A2P_Cli - AVIF to PNG Converter (2.0-beta)
 
-**Convert AVIF images to PNG via command line.**
+A modular, robust CLI tool for converting AVIF images to PNG with advanced quantization and dithering options.
 
 ## Features
-- Batch convert `.avif` images to `.png`.
-- Greyscale images are quantized to 16 levels by default.
-- Optional quantization bitness for color, grayscale+one, and grayscale images via `--qb_color`, `--qb_gray-color`, and `--qb_gray` flags.
-- Supports recursive conversion in subfolders.
-- Optionally deletes original `.avif` files after conversion.
-- Customizable output directory.
-- Silent mode for scripting.
+- **Interactive CLI** with menu navigation and option editing
+- **Advanced options**: quantization method, dither, per-mode bit depth
+- **Centralized config** for defaults, descriptions, and validation
+- **Type-checked, modular codebase** for maintainability
+- **Automated tests** for all validators and menu helpers
 
-## Installation
-Install the required dependencies with pip (works in PowerShell, CMD, or Bash):
+## Project Structure
+```
+A2P_Cli/
+├── cli/
+│   ├── menu.py           # Main menu logic
+│   ├── config.py         # All defaults, descriptions, and validators
+│   ├── menu_helpers.py   # Menu rendering/input helpers
+│   └── __init__.py
+├── logic/
+│   ├── convert.py        # Conversion logic
+│   └── __init__.py
+├── tests/
+│   ├── test_validators.py
+│   ├── test_menu_helpers.py
+│   └── __init__.py
+├── main.py               # Entry point
+├── README.md
+├── CHANGELOG.md
+...
+```
 
+## CLI Options
+- **input_dir**: Directory containing .avif files (required)
+- **--output_dir OUTPUT_DIR**: Directory to save .png files (default: same as input_dir)
+- **--replace**: Remove original .avif files after conversion
+- **--recursive**: Recursively search for .avif files in subdirectories
+- **--silent**: No output to command line, only finishing result
+- **--qb_color N**: Quantization bitness for color images (1–8, i.e., 2–256 colors)
+- **--qb_gray-color N**: Quantization bitness for grayscale+one images (1–8, i.e., 2–256 levels)
+- **--qb_gray N**: Quantization bitness for grayscale images (1–8, i.e., 2–256 levels)
+- **--method N**: Quantization method. Options:
+    - 0: Median Cut (slower, high quality)
+    - 1: Maximum Coverage (alternative, slower)
+    - 2: Fast Octree (default, fastest, good for most images)
+- **--dither N**: Dithering method. Options:
+    - 0: None (no dithering, may cause banding)
+    - 1: Floyd-Steinberg (default, visually smooths gradients)
+
+See the [Pillow quantize() documentation](https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.quantize) for more details.
+
+### Example
 ```sh
-pip install -r requirements.txt
+python main.py input_dir --output_dir out --qb_color 4 --replace --method 2 --dither 1
 ```
 
-## Usage
+### Option Details
+- **method**: Controls how the palette is chosen for quantization. '2' (Fast Octree) is fastest and works well for most images. '0' (Median Cut) and '1' (Max Coverage) may be higher quality for some images, especially with many colors.
+- **dither**: Controls how color transitions are smoothed. '1' (Floyd-Steinberg) is the default and gives smoother gradients. '0' disables dithering, which may make banding more visible but sometimes gives a cleaner look for flat-color art.
 
-### Windows Executable
-After downloading the release (`A2P_Cli.exe`), run from command prompt:
-
-```
-A2P_Cli.exe input_dir [--output_dir OUTPUT_DIR] [--replace] [--recursive] [--silent] [--qb_color QUANTIZE_BITS] [--qb_gray-color QUANTIZE_BITS] [--qb_gray QUANTIZE_BITS]
-```
-- `input_dir`: Directory containing `.avif` files (required)
-- `--output_dir`: Output directory for `.png` files (optional)
-- `--replace`: Remove original `.avif` files after conversion (flag)
-- `--recursive`: Search for `.avif` files recursively (flag)
-- `--silent`: Suppress per-file output, only print summary (flag)
-- `--qb_color QUANTIZE_BITS`: Quantization bitness for color images (1–8, optional)
-- `--qb_gray-color QUANTIZE_BITS`: Quantization bitness for grayscale+one images (1–8, optional)
-- `--qb_gray QUANTIZE_BITS`: Quantization bitness for grayscale images (1–8, optional)
-
-### Python Script
-Run with Python (for development or advanced use):
-
-```
-python main.py input_dir [--output_dir OUTPUT_DIR] [--replace] [--recursive] [--silent] [--qb_color QUANTIZE_BITS] [--qb_gray-color QUANTIZE_BITS] [--qb_gray QUANTIZE_BITS]
-```
-
-## Quantization and PIL Limitations
-
-- The `--qb_color`, `--qb_gray-color`, and `--qb_gray` flags control the bitness of quantization for color, grayscale+one, and grayscale images, respectively.
-- **Valid range:** 1–8 bits. If a value outside this range is provided, the conversion will fail for that image.
-- If no quantization flag is provided:
-  - Grayscale images default to 4 bits (16 levels).
-  - Color images are saved without quantization.
-- This limitation is due to the [Pillow (PIL) quantize() API](https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.quantize), which only supports 1–8 bits per channel for PNG output.
-
-## Versioning
-
-Releases follow semantic versioning: `vX.Y` for stable, `vX.Y-beta` for pre-releases. The current version is tracked in the `VERSION` file.
+## Developer Notes
+- All default values, option descriptions, and input validation are in `cli/config.py`.
+- Menu rendering and input helpers are in `cli/menu_helpers.py`.
+- All CLI and helper logic is type-annotated for clarity and editor support.
+- To run tests: `pytest tests/`
 
 ## Changelog
-See the [GitHub Releases](https://github.com/Devaste/A2P_Cli/releases) page or the [commit log](https://github.com/Devaste/A2P_Cli/commits/main) for details.
+See [CHANGELOG.md](CHANGELOG.md) for details on the 2.0-beta release and previous versions.
 
 ## License
 This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
