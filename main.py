@@ -2,7 +2,10 @@ import argparse
 from convert import convert_avif_to_png
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert all .avif images in a directory to .png format.")
+    parser = argparse.ArgumentParser(
+        usage="%(prog)s input_dir [-h] [--output_dir OUTPUT_DIR] [--replace] [--recursive] [--silent]",
+        description="Convert all .avif images in a directory to .png format."
+    )
     parser.add_argument('input_dir', help="Directory containing .avif files")
     parser.add_argument('--output_dir', help="Directory to save .png files (default: same as input_dir)")
     parser.add_argument('--replace', action='store_true', help='Remove original .avif files after conversion')

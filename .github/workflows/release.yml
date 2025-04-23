@@ -46,7 +46,7 @@ jobs:
         if: matrix.os == 'windows-latest' && matrix.python-version == '3.13'
         run: |
           pip install pyinstaller
-          pyinstaller --onefile main.py --name A2P_Cli
+          pyinstaller --onefile main.py --name A2P_Cli --icon icon.ico
 
       - name: Archive build artifacts (Windows)
         if: matrix.os == 'windows-latest' && matrix.python-version == '3.13'
@@ -84,22 +84,28 @@ jobs:
       - name: Set release variables
         id: set_release
         run: |
+          VERSION=$(cat VERSION)
           BRANCH="${{ github.ref_name }}"
           if [ "$BRANCH" = "main" ]; then
-            TAG="v$(date +'%Y.%m')"
+            TAG="v$VERSION"
             PRERELEASE=false
           else
-            TAG="$(date +'%Y.%m')-beta"
+            TAG="v$VERSION-beta"
             PRERELEASE=true
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+      - name: Extract latest changelog entry
+        id: changelog
+        run: |
+          awk '/^## \[v/{if (p) exit; p=1} p' CHANGELOG.md > LATEST_CHANGELOG.md
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.set_release.outputs.tag }}
           prerelease: ${{ steps.set_release.outputs.prerelease }}
-          generate_release_notes: true
+          generate_release_notes: false
+          body_path: ./LATEST_CHANGELOG.md
           files: |
             ./dist/win/A2P_Cli.exe
             ./dist/linux/A2P_Cli

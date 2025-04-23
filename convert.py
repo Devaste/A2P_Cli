@@ -58,14 +58,12 @@ def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=Fal
     input_path = Path(input_dir)
     output_path = Path(output_dir) if output_dir else input_path
     if not input_path.is_dir():
-        if not silent:
-            print(f"Input directory '{input_dir}' does not exist.")
+        print(f"Input directory '{input_dir}' does not exist.")
         return
     output_path.mkdir(parents=True, exist_ok=True)
     avif_files = find_avif_files(input_path, recursive)
     if not avif_files:
-        if not silent:
-            print("No .avif files found in the input directory.")
+        print("No .avif files found in the input directory.")
         return
     success = 0
     fail = 0

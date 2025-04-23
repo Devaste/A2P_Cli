@@ -18,31 +18,32 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-Run the script with Python (use `python` or `python3` as appropriate):
 
-```sh
-python convert.py <input_dir> [--output_dir OUTPUT] [--replace] [--recursive] [--silent] [--log [LOG]]
+### Windows Executable
+After downloading the release (`A2P_Cli.exe`), run from command prompt:
+
 ```
-- `<input_dir>`: Directory containing `.avif` files (required)
+A2P_Cli.exe input_dir [--output_dir OUTPUT_DIR] [--replace] [--recursive] [--silent]
+```
+- `input_dir`: Directory containing `.avif` files (required)
 - `--output_dir`: Output directory for `.png` files (optional)
 - `--replace`: Remove original `.avif` files after conversion (flag)
 - `--recursive`: Search for `.avif` files recursively (flag)
 - `--silent`: Suppress per-file output, only print summary (flag)
-- `--log`: Enable logging to `convert.log` (optional, default log level is 20 = INFO)
 
-## Logging
+### Python Script
+Run with Python (for development or advanced use):
 
-You can enable logging to `convert.log` using the `--log` flag:
+```
+python main.py input_dir [--output_dir OUTPUT_DIR] [--replace] [--recursive] [--silent]
+```
 
-    python convert.py <input_dir> --log
+## Versioning
 
-To set the log level, pass a number (default is 20 = INFO):
+Releases follow semantic versioning: `vX.Y` for stable, `vX.Y-beta` for pre-releases. The current version is tracked in the `VERSION` file.
 
-    python convert.py <input_dir> --log 10   # DEBUG
-    python convert.py <input_dir> --log 20   # INFO
-    python convert.py <input_dir> --log 30   # WARNING
-    python convert.py <input_dir> --log 40   # ERROR
-    python convert.py <input_dir> --log 50   # CRITICAL
+## Changelog
+See the [GitHub Releases](https://github.com/Devaste/A2P_Cli/releases) page or the [commit log](https://github.com/Devaste/A2P_Cli/commits/main) for details.
 
 ## License
 This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
