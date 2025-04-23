@@ -2,19 +2,9 @@ import sys
 from typing import Any
 from logic.convert import convert_avif_to_png
 from logic.logging_config import configure_logging
+from logic.update_check import check_for_update
 from .config import DEFAULT_METHOD, DEFAULT_DITHER, METHOD_CHOICES, DITHER_CHOICES, OPTION_VALIDATORS
 from .menu_helpers import print_option, get_validated_input, clear_screen
-
-def print_menu() -> None:
-    clear_screen()
-    print("\nA2P_Cli - AVIF to PNG Converter")
-    print("1. Start Interactive Conversion")
-    print("2. Edit Options")
-    print("0. Quit")
-
-def get_input(prompt: str, default: Any = None) -> Any:
-    val = input(f"{prompt} " + (f"[default: {default}] " if default else ""))
-    return val.strip() or default
 
 # Store CLI argument values globally for interactive editing
 cli_args = {
@@ -36,6 +26,18 @@ def get_method_str(val: Any) -> str:
 
 def get_dither_str(val: Any) -> str:
     return f"{val} ({DITHER_CHOICES.get(val, 'Unknown')})" if val is not None else 'None'
+
+def print_menu() -> None:
+    clear_screen()
+    print("\nA2P_Cli - AVIF to PNG Converter")
+    print("1. Start Interactive Conversion")
+    print("2. Edit Options")
+    print("3. Check for Updates")
+    print("0. Quit")
+
+def get_input(prompt: str, default: Any = None) -> Any:
+    val = input(f"{prompt} " + (f"[default: {default}] " if default else ""))
+    return val.strip() or default
 
 def show_options_menu() -> None:
     while True:
@@ -110,18 +112,21 @@ def convert_menu() -> None:
 def run() -> None:
     while True:
         print_menu()
-        choice = get_validated_input("Choose an option (0-2):")
+        choice = get_validated_input("Choose an option (0-3):")
         match choice:
             case "1":
                 configure_logging(cli_args.get('log_level', 0))
                 convert_menu()
             case "2":
                 show_options_menu()
+            case "3":
+                check_for_update()
+                input("Press Enter to return to menu...")
             case "0":
                 print("Exiting.")
                 sys.exit(0)
             case _:
-                print("Invalid option. Please enter 0, 1, or 2.")
+                print("Invalid option. Please enter 0, 1, 2, or 3.")
 
 if __name__ == "__main__":
     run()
