@@ -1,4 +1,6 @@
-# A2P_Cli - AVIF to PNG Converter (2.0-beta)
+# A2P_Cli - AVIF to PNG Converter
+
+**This is the main public release (v1.3, stable).**
 
 A modular, robust CLI tool for converting AVIF images to PNG with advanced quantization and dithering options.
 
@@ -16,14 +18,9 @@ A2P_Cli/
 │   ├── menu.py           # Main menu logic
 │   ├── config.py         # All defaults, descriptions, and validators
 │   ├── menu_helpers.py   # Menu rendering/input helpers
-│   └── __init__.py
 ├── logic/
 │   ├── convert.py        # Conversion logic
-│   └── __init__.py
-├── tests/
-│   ├── test_validators.py
-│   ├── test_menu_helpers.py
-│   └── __init__.py
+│   ├── update_check.py   # Update/version check logic
 ├── main.py               # Entry point
 ├── README.md
 ├── CHANGELOG.md
@@ -69,7 +66,7 @@ python main.py input_dir --output_dir out --qb_color 4 --replace --method 2 --di
 - To run tests: `pytest tests/`
 
 ## Changelog
-See [CHANGELOG.md](CHANGELOG.md) for details on the 2.0-beta release and previous versions.
+See [CHANGELOG.md](CHANGELOG.md) for details on the latest stable release (v1.3) and previous versions.
 
 ## License
 This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
