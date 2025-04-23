@@ -105,7 +105,7 @@ jobs:
       - name: Extract latest changelog entry
         id: changelog
         run: |
-          awk '/^## \[v/{if (p) exit; p=1} p' CHANGELOG.md > LATEST_CHANGELOG.md
+          awk '/^## \[/{if (p) exit; p=1} p' CHANGELOG.md > LATEST_CHANGELOG.md
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
