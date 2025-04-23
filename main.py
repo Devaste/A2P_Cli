@@ -12,10 +12,10 @@ def main():
     if args.version:
         version = get_local_version() or "unknown"
         print(f"A2P_Cli version {version}")
-        sys.exit(0)
+        return  # Prevent further execution
     if args.check_update:
         check_for_update()
-        sys.exit(0)
+        return  # Prevent further execution
 
     # Default: run the main menu
     check_for_update()
