@@ -1,0 +1,28 @@
+> import pytest
+> from cli.config import OPTION_VALIDATORS
+  
+> @pytest.mark.parametrize("key,value,expected", [
+>     ("input_dir", "some/path", True),
+>     ("input_dir", "", False),
+>     ("output_dir", "out", True),
+>     ("output_dir", None, True),
+>     ("replace", "y", True),
+>     ("replace", "n", True),
+>     ("replace", True, True),
+>     ("replace", False, True),
+>     ("replace", "maybe", False),
+>     ("qb_color", "4", True),
+>     ("qb_color", "0", False),
+>     ("qb_color", "9", False),
+>     ("qb_color", "", True),
+>     ("qb_color", None, True),
+>     ("method", "0", True),
+>     ("method", "2", True),
+>     ("method", "3", False),
+>     ("dither", "1", True),
+>     ("dither", "0", True),
+>     ("dither", "2", False),
+> ])
+> def test_option_validators(key, value, expected):
+>     validator = OPTION_VALIDATORS[key]
+>     assert validator(value) == expected

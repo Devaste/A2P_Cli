@@ -28,6 +28,8 @@ def find_avif_files(input_path, recursive):
 def quantize_and_save(img, png_file, colors: int, mode: str, silent: bool, label: str, **kwargs):
     method = int(kwargs.pop('method', 2))
     dither = int(kwargs.pop('dither', 1))
+    if kwargs:
+        print(f"Warning: Unexpected keyword arguments received: {', '.join(kwargs.keys())}")
     img_q = img.convert(mode).quantize(colors=int(colors), method=method, dither=dither)
     img_q.save(png_file, 'PNG', optimize=True)
     if not silent:

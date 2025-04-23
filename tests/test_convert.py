@@ -2,7 +2,7 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from convert import convert_avif_to_png
+from logic.convert import convert_avif_to_png
 from PIL import Image
 import pytest
 

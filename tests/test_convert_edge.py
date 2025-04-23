@@ -1,4 +1,3 @@
-import os
 import tempfile
 from pathlib import Path
 import pytest
@@ -26,3 +25,17 @@ def test_invalid_input_dir():
     # Should raise FileNotFoundError or similar
     with pytest.raises(Exception):
         convert_avif_to_png("nonexistent_dir_xyz", None, silent=True)
+
+def test_pillow_avif_import_guard(monkeypatch):
+    import importlib
+    import logic
+    # Simulate ImportError for pillow_avif
+    orig_import = __import__
+    def fake_import(name, *args, **kwargs):
+        if name == "pillow_avif":
+            raise ImportError("simulated missing pillow_avif")
+        return orig_import(name, *args, **kwargs)
+    monkeypatch.setattr("builtins.__import__", fake_import)
+    importlib.reload(logic.convert)
+    # Should not raise
+    assert hasattr(logic.convert, "convert_avif_to_png")
