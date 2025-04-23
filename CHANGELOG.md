@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
+## [1.0] - 2025-04-23
+### Initial Release
+- First public release of A2P_Cli: AVIF to PNG Converter.
+- Modular CLI, robust validation, 100% test coverage, and cross-platform support.
+- Features: interactive conversion, configurable options, quantization, dither, batch processing, and more.
+
 ## [2.2] - 2025-04-23
 ### Added
 - Automatic update check on startup: notifies user if a new version is available on GitHub Releases.
