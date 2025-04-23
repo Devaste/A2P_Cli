@@ -21,19 +21,38 @@ def find_avif_files(input_path, recursive):
     pattern = '**/*.avif' if recursive else '*.avif'
     return list(input_path.glob(pattern))
 
-def convert_single_image(avif_file, png_file, silent):
-    """Convert a single AVIF file to PNG, using GUI-style quantization for greyscale images."""
+def convert_single_image(avif_file, png_file, silent, qb_color=None, qb_gray_color=None, qb_gray=None):
+    """Convert a single AVIF file to PNG, using quantization flags if provided."""
     try:
         with Image.open(avif_file) as img:
             if is_greyscale(img):
-                img_4bit = quantize_4bit_gui(img)
-                img_4bit.save(png_file, 'PNG', optimize=True)
-                if not silent:
-                    print(f"[GREYSCALE 4bit GUI] Converted: {avif_file.name} -> {png_file.name}")
+                # Grayscale image
+                if qb_gray is not None:
+                    img_q = img.convert("L").quantize(colors=2**qb_gray, method=2, dither=0)
+                    img_q.save(png_file, 'PNG', optimize=True)
+                    if not silent:
+                        print(f"[GREYSCALE {2**qb_gray} levels] Converted: {avif_file.name} -> {png_file.name}")
+                elif qb_gray_color is not None:
+                    img_q = img.convert("L").quantize(colors=2**qb_gray_color, method=2, dither=0)
+                    img_q.save(png_file, 'PNG', optimize=True)
+                    if not silent:
+                        print(f"[GREYSCALE+ONE {2**qb_gray_color} levels] Converted: {avif_file.name} -> {png_file.name}")
+                else:
+                    img_4bit = quantize_4bit_gui(img)
+                    img_4bit.save(png_file, 'PNG', optimize=True)
+                    if not silent:
+                        print(f"[GREYSCALE 4bit GUI] Converted: {avif_file.name} -> {png_file.name}")
             else:
-                img.save(png_file, 'PNG', optimize=True)
-                if not silent:
-                    print(f"[COLOR] Converted: {avif_file.name} -> {png_file.name}")
+                # Color image
+                if qb_color is not None:
+                    img_q = img.convert("RGB").quantize(colors=2**qb_color, method=2, dither=0)
+                    img_q.save(png_file, 'PNG', optimize=True)
+                    if not silent:
+                        print(f"[COLOR {2**qb_color} colors] Converted: {avif_file.name} -> {png_file.name}")
+                else:
+                    img.save(png_file, 'PNG', optimize=True)
+                    if not silent:
+                        print(f"[COLOR] Converted: {avif_file.name} -> {png_file.name}")
         return True
     except Exception as e:
         if not silent:
@@ -49,10 +68,11 @@ def remove_original_file(avif_file):
     """Remove the original AVIF file after conversion."""
     avif_file.unlink()
 
-def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=False, silent=False):
+def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=False, silent=False, qb_color=None, qb_gray_color=None, qb_gray=None):
     """
     Convert all .avif images in a directory (optionally recursively) to .png format.
-    Greyscale images are quantized to 16 levels using GUI-style logic.
+    Greyscale images are quantized to 16 levels using GUI-style logic by default.
+    Supports custom quantization via CLI flags.
     Optionally deletes originals, supports custom output dir and silent mode.
     """
     input_path = Path(input_dir)
@@ -72,7 +92,7 @@ def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=Fal
             png_file = avif_file.parent / (avif_file.stem + '.png')
         else:
             png_file = output_path / (avif_file.stem + '.png')
-        converted = convert_single_image(avif_file, png_file, silent)
+        converted = convert_single_image(avif_file, png_file, silent, qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray)
         if converted:
             if replace:
                 remove_original_file(avif_file)
