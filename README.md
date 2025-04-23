@@ -46,11 +46,15 @@ A2P_Cli/
 - **--dither N**: Dithering method. Options:
     - 0: None (no dithering, may cause banding)
     - 1: Floyd-Steinberg (default, visually smooths gradients)
+- **--version**: Print the current version and exit
+- **--check-update**: Check for updates and exit
 
 See the [Pillow quantize() documentation](https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.quantize) for more details.
 
 ### Example
 ```sh
+python main.py --version
+python main.py --check-update
 python main.py input_dir --output_dir out --qb_color 4 --replace --method 2 --dither 1
 ```
 
