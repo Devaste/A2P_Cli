@@ -2,7 +2,7 @@ import sys
 from typing import Any
 from logic.convert import convert_avif_to_png
 from .config import DEFAULT_METHOD, DEFAULT_DITHER, METHOD_CHOICES, DITHER_CHOICES, OPTION_VALIDATORS
-from .menu_helpers import print_option, get_validated_input
+from .menu_helpers import print_option, get_validated_input, clear_screen
 
 def print_menu() -> None:
     print("\nA2P_Cli - AVIF to PNG Converter")
@@ -36,6 +36,7 @@ def get_dither_str(val: Any) -> str:
 
 def show_options_menu() -> None:
     while True:
+        clear_screen()
         print("\nEdit CLI Options:")
         print_option(1, 'input_dir', cli_args['input_dir'])
         print_option(2, 'output_dir', cli_args['output_dir'])

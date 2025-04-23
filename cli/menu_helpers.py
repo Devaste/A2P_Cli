@@ -1,5 +1,10 @@
+import os
 from typing import Callable, Optional, Any
 from .config import OPTION_DESCRIPTIONS
+
+def clear_screen():
+    """Clear the terminal screen in a cross-platform way."""
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 def print_option(index: int, key: str, value: Any, extra: Optional[str] = None) -> None:
     """

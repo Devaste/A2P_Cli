@@ -2,7 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
+
+## [2.1] - 2025-04-23
+### Improved
+- CLI now clears the terminal before displaying each menu for a true "refresh" effect, improving UX.
+- Added cross-platform clear_screen utility and integrated it into the options menu.
+- Cleaned up unused imports and references in tests and codebase.
+- Streamlined .gitignore for modern Python/pytest/coverage workflows.
+- Added .gitattributes for cross-platform line ending consistency.
+- Maintained 100% code coverage and robust test suite.
 
 ## [2.0-beta] - 2025-04-23
 ### Major Changes
