@@ -24,22 +24,22 @@ pip install -r requirements.txt
 After downloading the release (`A2P_Cli.exe`), run from command prompt:
 
 ```
-A2P_Cli.exe input_dir [--output_dir OUTPUT_DIR] [--replace] [--recursive] [--silent] [--qb_color QB_COLOR] [--qb_gray-color QB_GRAY_COLOR] [--qb_gray QB_GRAY]
+A2P_Cli.exe input_dir [--output_dir OUTPUT_DIR] [--replace] [--recursive] [--silent] [--qb_color QUANTIZE_BITS] [--qb_gray-color QUANTIZE_BITS] [--qb_gray QUANTIZE_BITS]
 ```
 - `input_dir`: Directory containing `.avif` files (required)
 - `--output_dir`: Output directory for `.png` files (optional)
 - `--replace`: Remove original `.avif` files after conversion (flag)
 - `--recursive`: Search for `.avif` files recursively (flag)
 - `--silent`: Suppress per-file output, only print summary (flag)
-- `--qb_color QB_COLOR`: Quantization bitness for color images (optional)
-- `--qb_gray-color QB_GRAY_COLOR`: Quantization bitness for grayscale+one images (optional)
-- `--qb_gray QB_GRAY`: Quantization bitness for grayscale images (optional)
+- `--qb_color QUANTIZE_BITS`: Quantization bitness for color images (1–8, optional)
+- `--qb_gray-color QUANTIZE_BITS`: Quantization bitness for grayscale+one images (1–8, optional)
+- `--qb_gray QUANTIZE_BITS`: Quantization bitness for grayscale images (1–8, optional)
 
 ### Python Script
 Run with Python (for development or advanced use):
 
 ```
-python main.py input_dir [--output_dir OUTPUT_DIR] [--replace] [--recursive] [--silent] [--qb_color QB_COLOR] [--qb_gray-color QB_GRAY_COLOR] [--qb_gray QB_GRAY]
+python main.py input_dir [--output_dir OUTPUT_DIR] [--replace] [--recursive] [--silent] [--qb_color QUANTIZE_BITS] [--qb_gray-color QUANTIZE_BITS] [--qb_gray QUANTIZE_BITS]
 ```
 
 ## Quantization and PIL Limitations
