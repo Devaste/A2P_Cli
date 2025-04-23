@@ -5,6 +5,7 @@ from .config import DEFAULT_METHOD, DEFAULT_DITHER, METHOD_CHOICES, DITHER_CHOIC
 from .menu_helpers import print_option, get_validated_input, clear_screen
 
 def print_menu() -> None:
+    clear_screen()
     print("\nA2P_Cli - AVIF to PNG Converter")
     print("1. Start Interactive Conversion")
     print("2. Edit Options")
@@ -87,6 +88,7 @@ def show_options_menu() -> None:
                 print("Invalid option. Please enter a number between 0 and 10.")
 
 def convert_menu() -> None:
+    clear_screen()
     convert_avif_to_png(
         cli_args['input_dir'],
         cli_args['output_dir'],
