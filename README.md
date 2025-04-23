@@ -4,7 +4,7 @@
 
 ## Features
 - Batch convert `.avif` images to `.png`.
-- Greyscale images are quantized to 16 levels (GUI-style logic) by default.
+- Greyscale images are quantized to 16 levels by default.
 - Optional quantization bitness for color, grayscale+one, and grayscale images via `--qb_color`, `--qb_gray-color`, and `--qb_gray` flags.
 - Supports recursive conversion in subfolders.
 - Optionally deletes original `.avif` files after conversion.
@@ -47,7 +47,7 @@ python main.py input_dir [--output_dir OUTPUT_DIR] [--replace] [--recursive] [--
 - The `--qb_color`, `--qb_gray-color`, and `--qb_gray` flags control the bitness of quantization for color, grayscale+one, and grayscale images, respectively.
 - **Valid range:** 1–8 bits. If a value outside this range is provided, the conversion will fail for that image.
 - If no quantization flag is provided:
-  - Grayscale images default to 4 bits (16 levels, GUI-style logic).
+  - Grayscale images default to 4 bits (16 levels).
   - Color images are saved without quantization.
 - This limitation is due to the [Pillow (PIL) quantize() API](https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.quantize), which only supports 1–8 bits per channel for PNG output.
 
