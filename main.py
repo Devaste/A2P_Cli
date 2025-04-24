@@ -8,7 +8,14 @@ from PIL import Image
 
 def main():
     args = parse_cli_args()
+    if args is None:
+        run()
+        sys.exit(0)
     configure_logging(args.log)
+
+    # Early exit for --version and --check-update
+    if getattr(args, 'version', False) or getattr(args, 'check_update', False):
+        return
 
     input_path = Path(args.input_dir)
     if input_path.is_file() and getattr(args, 'chk_bit', False):

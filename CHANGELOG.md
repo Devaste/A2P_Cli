@@ -8,9 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 - `--chk_bit`: Show real color count and approximate bit-depth for single files or all converted images.
 - Tests for color count/bit-depth feature.
+- Menu launches automatically if no CLI arguments are provided (user-friendly default for GUI/menu users).
 
 ### Fixed
 - Output directory logic: Now always respects `--output_dir` and preserves input subdirectory structure in recursive mode.
+- CLI no longer errors about missing `input_dir` when run with `--version` or `--check-update`.
 
 ### Improved
 - Documentation and README updated for new features and usage.

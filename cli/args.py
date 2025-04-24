@@ -1,7 +1,10 @@
 from .config import DEFAULT_METHOD, DEFAULT_DITHER, DEFAULT_LOG_LEVEL
 import argparse
+import sys
 
 def parse_cli_args():
+    if len(sys.argv) == 1:
+        return None  # Signal: launch menu
     parser = argparse.ArgumentParser(description="A2P_Cli: AVIF to PNG Converter")
     parser.add_argument("input_dir", type=str, nargs="?", help="Directory or file to convert (required unless --version or --check-update)")
     parser.add_argument("--output_dir", type=str, default=None, help="Directory to save .png files (default: same as input)")
