@@ -1,13 +1,13 @@
 import sys
 
 from cli.main_menu import run as main_menu_run
-from cli.script_mode_utils import run_script_mode
+from cli.script_mode import run as script_mode_run
 
 def main():
     if len(sys.argv) == 1:
         main_menu_run()
     else:
-        run_script_mode()
+        script_mode_run()
 
 if __name__ == "__main__":
     main()

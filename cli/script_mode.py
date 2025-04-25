@@ -5,7 +5,7 @@ from pathlib import Path
 from PIL import Image
 import sys
 
-def run_script_mode():
+def run():
     args = parse_cli_args()
     if args is None:
         print("[Error] No CLI arguments provided.")
