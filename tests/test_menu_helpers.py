@@ -1,4 +1,4 @@
-from cli.menu_helpers import print_option, get_validated_input
+from cli.menu_utils import print_option, get_validated_input
 from cli.config import OPTION_DESCRIPTIONS
 import builtins
 import pytest

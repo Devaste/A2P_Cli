@@ -11,11 +11,9 @@ env/
 .idea/
 
 # Test/coverage artifacts
-htmlcov/
-.coverage
-.coverage.*
 .pytest_cache/
 
 # Miscellaneous
 .DS_Store
 Thumbs.db
+/a2pcli_debug.log

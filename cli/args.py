@@ -1,4 +1,5 @@
 from .config import DEFAULT_METHOD, DEFAULT_DITHER, DEFAULT_LOG_LEVEL
+from cli.globals import cli_args
 import argparse
 import sys
 
@@ -24,4 +25,5 @@ def parse_cli_args():
     # Enforce input_dir only if not version/check-update
     if not (args.version or args.check_update) and not args.input_dir:
         parser.error("the following arguments are required: input_dir")
-    return args
+    cli_args.update(vars(args))
+    return cli_args

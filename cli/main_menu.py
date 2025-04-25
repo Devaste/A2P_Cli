@@ -1,0 +1,427 @@
+from textual.app import App, ComposeResult
+from textual.widgets import Header, Footer, Static, ListView, ListItem, Input
+from textual.containers import Vertical
+from textual.reactive import reactive
+from textual import events
+from textual.screen import Screen, ModalScreen
+from rich.text import Text
+from logic.logging_config import configure_logging
+from logic.update_check import check_for_update
+from logic.convert import convert_avif_to_png
+from cli.globals import cli_args, STATUS_COLORS
+import logging
+import threading
+import traceback
+
+MENU_OPTIONS = [
+    ("Start Interactive Conversion", "start"),
+    ("Edit Options", "edit"),
+    ("Check for Updates", "update"),
+    ("Quit", "quit"),
+]
+
+EDIT_MENU_OPTIONS = [
+    ("input_dir", "input_dir"),
+    ("output_dir", "output_dir"),
+    ("replace", "replace"),
+    ("recursive", "recursive"),
+    ("silent", "silent"),
+    ("qb_color", "qb_color"),
+    ("qb_gray_color", "qb_gray_color"),
+    ("qb_gray", "qb_gray"),
+    ("method", "method"),
+    ("dither", "dither"),
+    ("log_level", "log_level"),
+    ("Back to main menu", "back"),
+]
+
+OPTION_VALIDATORS = {
+    "output_dir": lambda v: v.strip() or None,
+    "replace": lambda v: v.lower() == 'y' if isinstance(v, str) else bool(v),
+    "recursive": lambda v: v.lower() == 'y' if isinstance(v, str) else bool(v),
+    "silent": lambda v: v.lower() == 'y' if isinstance(v, str) else bool(v),
+    "qb_color": lambda v: int(v) if v else None,
+    "qb_gray_color": lambda v: int(v) if v else None,
+    "qb_gray": lambda v: int(v) if v else None,
+    "method": lambda v: int(v),
+    "dither": lambda v: int(v),
+}
+
+def get_validated_input(prompt, default, validator):
+    while True:
+        val = input(prompt + " [" + str(default) + "]: ")
+        if not val:
+            return default
+        if validator(val):
+            return val
+        print("Invalid input. Please try again.")
+
+
+class StatusFooter(Footer):
+    status: reactive[str] = reactive("")
+    status_type: reactive[str] = reactive("INFO")
+
+    def set_status(self, msg: str, status_type: str = "INFO"):
+        self.status = msg
+        self.status_type = status_type
+        self.refresh()
+
+    def render(self):
+        color = STATUS_COLORS.get(self.status_type, "yellow")
+        msg = self.status or ""
+        if msg:
+            return Text(msg, style=f"bold {color}")
+        return super().render()
+
+
+class MainMenuApp(App):
+    TITLE = "A2P_Cli - AVIF to PNG Converter"
+    CSS_PATH = None
+    status: reactive[str] = reactive("")
+    edit_status: reactive[str] = reactive("")
+    progress: reactive[int] = reactive(0)
+    progress_total: reactive[int] = reactive(1)
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        yield Vertical(
+            ListView(
+                *[ListItem(Static(label), id=action) for label, action in MENU_OPTIONS],
+                id="menu_list"
+            ),
+        )
+        yield StatusFooter()
+
+    async def on_mount(self) -> None:
+        self.query_one("#menu_list").focus()
+        self.update_status("")
+
+    def update_status(self, msg: str, status_type: str = "INFO"):
+        # Update the status message with the given status type.
+        # Usage: self.update_status("Conversion finished!", "SUCCESS")
+        # For errors: self.update_status("'input_dir' is required...", "ERROR")
+        # For info: self.update_status("Options saved!", "INFO")
+        try:
+            footer = self.query(StatusFooter).first()
+            if footer:
+                footer.set_status(msg, status_type)
+        except Exception:
+            pass
+
+    async def on_list_view_selected(self, event: ListView.Selected) -> None:
+        action = event.item.id
+        if action == "start":
+            if not cli_args['input_dir'] or not str(cli_args['input_dir']).strip():
+                self.update_status("'input_dir' is required. Please set it in 'Edit Options' before starting conversion.", "ERROR")
+                return
+            self.progress = 0
+            self.progress_total = 1
+            def progress_callback(current, total):
+                percent = int(100 * current / total) if total else 100
+                self.call_from_thread(self.update_status, f"Conversion: {current}/{total} ({percent}%)", "INFO")
+                self.progress = current
+                self.progress_total = total
+            def run_conversion():
+                try:
+                    filtered_kwargs = {k: v for k, v in cli_args.items() if k not in ['input_dir', 'output_dir', 'replace', 'recursive', 'silent', 'qb_color', 'qb_gray_color', 'qb_gray', 'log_level']}
+                    convert_avif_to_png(
+                        cli_args['input_dir'],
+                        cli_args['output_dir'],
+                        replace=cli_args['replace'],
+                        recursive=cli_args['recursive'],
+                        silent=cli_args['silent'],
+                        qb_color=cli_args['qb_color'],
+                        qb_gray_color=cli_args['qb_gray_color'],
+                        qb_gray=cli_args['qb_gray'],
+                        progress_callback=progress_callback,
+                        **filtered_kwargs
+                    )
+                    self.call_from_thread(self.update_status, "Conversion finished!", "SUCCESS")
+                except Exception as e:
+                    logging.error(f"Exception in run_conversion: {e}\n{traceback.format_exc()}")
+                    self.call_from_thread(self.update_status, f"Exception during conversion: {e}", "ERROR")
+            threading.Thread(target=run_conversion, daemon=True).start()
+            return
+        elif action == "edit":
+            await self.push_screen(EditOptionsScreen())
+            return
+        elif action == "update":
+            check_for_update()
+            self.update_status("Checked for updates.", "INFO")
+        elif action == "quit":
+            await self.action_quit()
+
+    async def on_key(self, event: events.Key) -> None:
+        if event.key == "q":
+            await self.action_quit()
+        elif event.key in ("ctrl+q", "^Q", "^q") or (hasattr(event, "ctrl") and event.ctrl and event.key.lower() == "q"):
+            self.exit()
+
+    async def action_quit(self):
+        self.exit()
+
+    async def action_quit(self):
+        self.exit()
+
+
+class EditOptionsScreen(Screen):
+    status: reactive[str] = reactive("")
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        yield Vertical(
+            Static("Edit Options", classes="title"),
+            ListView(id="edit_menu_list"),
+        )
+        yield StatusFooter()
+
+    def refresh_options_list(self):
+        def get_option_value(action):
+            val = cli_args.get(action)
+            if action in ("replace", "recursive", "silent"):
+                return "Yes" if val else "No"
+            elif action == "output_dir":
+                # Show empty string if both output_dir and input_dir are blank/None
+                if not val:
+                    input_dir = cli_args.get("input_dir", "")
+                    if not input_dir:
+                        return ""
+                    return input_dir
+                return str(val)
+            elif val is None:
+                return "(default)"
+            return str(val)
+        options = [
+            ListItem(Static(f"{label}" if action == "back" else f"{label} [{get_option_value(action)}]", classes="option-item"), id=action)
+            for label, action in EDIT_MENU_OPTIONS
+        ]
+        list_view = self.query_one("#edit_menu_list", ListView)
+        list_view.clear()
+        for item in options:
+            list_view.append(item)
+
+    def update_status(self, msg: str, status_type: str = "INFO"):
+        # Update the status message with the given status type.
+        # Usage: self.update_status("Options saved!", "SUCCESS")
+        # For errors: self.update_status("Invalid input...", "ERROR")
+        # For info: self.update_status("Options saved!", "INFO")
+        try:
+            footer = self.query(StatusFooter).first()
+            if footer:
+                footer.set_status(msg, status_type)
+        except Exception:
+            pass
+        self.refresh_options_list()
+        self.refresh()
+
+    async def on_mount(self) -> None:
+        self.query_one("#edit_menu_list").focus()
+        self.update_status("")
+        self.refresh_options_list()
+
+    async def on_list_view_selected(self, event: ListView.Selected) -> None:
+        action = event.item.id
+        if action == "input_dir":
+            def set_input_dir(val):
+                if val is not None and val.strip():
+                    cli_args['input_dir'] = val.strip()
+                    self.update_status(f"input_dir set to: {cli_args['input_dir']}", "INFO")
+                elif val is not None:
+                    self.update_status("Invalid input. Please try again.", "ERROR")
+            await self.app.push_screen(InputDialog("Enter input directory:", cli_args['input_dir'], callback=set_input_dir))
+            return
+        elif action == "output_dir":
+            def set_output_dir(val):
+                prev = cli_args.get('output_dir') or ''
+                new_val = val.strip() if val and val.strip() else None
+                if new_val != prev:
+                    cli_args['output_dir'] = new_val
+                    self.update_status(f"output_dir set to: {cli_args['output_dir']}", "INFO")
+                else:
+                    self.update_status("", "INFO")
+            await self.app.push_screen(InputDialog("Enter output directory (blank for same as input):", cli_args['output_dir'] or "", callback=set_output_dir))
+            return
+        elif action == "qb_color":
+            def set_qb_color(val):
+                prev = cli_args.get('qb_color')
+                new_val = int(val) if val.strip() else None
+                if new_val != prev:
+                    cli_args['qb_color'] = new_val
+                    self.update_status(f"qb_color set to: {cli_args['qb_color']}", "INFO")
+                else:
+                    self.update_status("", "INFO")
+            await self.app.push_screen(InputDialog("Quantization bits for color images (1-8, blank for default):", str(cli_args['qb_color']) if cli_args['qb_color'] else "", callback=set_qb_color))
+            return
+        elif action == "qb_gray_color":
+            def set_qb_gray_color(val):
+                prev = cli_args.get('qb_gray_color')
+                new_val = int(val) if val.strip() else None
+                if new_val != prev:
+                    cli_args['qb_gray_color'] = new_val
+                    self.update_status(f"qb_gray_color set to: {cli_args['qb_gray_color']}", "INFO")
+                else:
+                    self.update_status("", "INFO")
+            await self.app.push_screen(InputDialog("Quantization bits for grayscale+one images (1-8, blank for default):", str(cli_args['qb_gray_color']) if cli_args['qb_gray_color'] else "", callback=set_qb_gray_color))
+            return
+        elif action == "qb_gray":
+            def set_qb_gray(val):
+                prev = cli_args.get('qb_gray')
+                new_val = int(val) if val.strip() else None
+                if new_val != prev:
+                    cli_args['qb_gray'] = new_val
+                    self.update_status(f"qb_gray set to: {cli_args['qb_gray']}", "INFO")
+                else:
+                    self.update_status("", "INFO")
+            await self.app.push_screen(InputDialog("Quantization bits for grayscale images (1-8, blank for default):", str(cli_args['qb_gray']) if cli_args['qb_gray'] else "", callback=set_qb_gray))
+            return
+        elif action == "method":
+            def set_method(val):
+                prev = cli_args.get('method')
+                new_val = int(val)
+                if new_val != prev:
+                    cli_args['method'] = new_val
+                    self.update_status(f"method set to: {cli_args['method']}", "INFO")
+                else:
+                    self.update_status("", "INFO")
+            await self.app.push_screen(InputDialog("Quantization method (0=Median Cut, 1=Max Coverage, 2=Fast Octree):", str(cli_args['method']), callback=set_method))
+            return
+        elif action == "dither":
+            def set_dither(val):
+                prev = cli_args.get('dither')
+                new_val = int(val)
+                if new_val != prev:
+                    cli_args['dither'] = new_val
+                    self.update_status(f"dither set to: {cli_args['dither']}", "INFO")
+                else:
+                    self.update_status("", "INFO")
+            await self.app.push_screen(InputDialog("Dither (0=None, 1=Floyd-Steinberg):", str(cli_args['dither']), callback=set_dither))
+            return
+        elif action == "log_level":
+            def set_log_level(val):
+                prev = cli_args.get('log_level')
+                new_val = int(val)
+                if new_val != prev:
+                    cli_args['log_level'] = new_val
+                    self.update_status(f"log_level set to: {cli_args['log_level']}", "INFO")
+                else:
+                    self.update_status("", "INFO")
+            await self.app.push_screen(InputDialog("Logging level (0=off, 1=error, 2=warning, 3=info, 4=debug):", str(cli_args.get('log_level', 0)), callback=set_log_level))
+            return
+        elif action == "replace":
+            def set_replace(val):
+                prev = cli_args.get('replace')
+                if val != prev:
+                    cli_args['replace'] = val
+                    self.update_status(f"replace set to: {cli_args['replace']}", "INFO")
+                else:
+                    self.update_status("", "INFO")
+            await self.app.push_screen(YesNoDialog("Replace originals?", cli_args['replace'], callback=set_replace))
+            return
+        elif action == "recursive":
+            def set_recursive(val):
+                prev = cli_args.get('recursive')
+                if val != prev:
+                    cli_args['recursive'] = val
+                    self.update_status(f"recursive set to: {cli_args['recursive']}", "INFO")
+                else:
+                    self.update_status("", "INFO")
+            await self.app.push_screen(YesNoDialog("Recursive search?", cli_args['recursive'], callback=set_recursive))
+            return
+        elif action == "silent":
+            def set_silent(val):
+                prev = cli_args.get('silent')
+                if val != prev:
+                    cli_args['silent'] = val
+                    self.update_status(f"silent set to: {cli_args['silent']}", "INFO")
+                else:
+                    self.update_status("", "INFO")
+            await self.app.push_screen(YesNoDialog("Silent mode?", cli_args['silent'], callback=set_silent))
+            return
+        elif action == "back":
+            self.update_status("Options saved!", "SUCCESS")
+            await self.app.pop_screen()
+            return
+
+    async def on_key(self, event: events.Key) -> None:
+        if event.key == "backspace":
+            self.app.pop_screen()
+        elif event.key in ("ctrl+q", "^Q", "^q") or (hasattr(event, "ctrl") and event.ctrl and event.key.lower() == "q"):
+            self.app.exit()
+
+
+class InputDialog(ModalScreen):
+    def __init__(self, title: str, initial: str = "", callback=None):
+        super().__init__()
+        self.title = title
+        self.initial = initial
+        self.callback = callback
+
+    def compose(self) -> ComposeResult:
+        yield Static(self.title, classes="title")
+        yield Static(f"Current value: {self.initial if self.initial else '(default)'}", classes="current-value")
+        input_widget = Input(value=self.initial, placeholder=self.title, id="input_dialog_input")
+        yield input_widget
+        yield Static("[Enter] to confirm, [Esc] to cancel", classes="help")
+
+    async def on_mount(self) -> None:
+        input_widget = self.query_one("#input_dialog_input", Input)
+        input_widget.focus()
+
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        if self.callback:
+            self.callback(event.value)
+        self.dismiss()
+
+    async def on_key(self, event: events.Key) -> None:
+        if event.key == "escape":
+            if self.callback:
+                self.callback(None)
+            self.dismiss()
+
+
+class YesNoDialog(ModalScreen):
+    def __init__(self, title: str, initial: bool = False, callback=None):
+        super().__init__()
+        self.title = title
+        self.initial = initial
+        self.value = initial
+        self.callback = callback
+
+    def compose(self) -> ComposeResult:
+        yield Static(self.title, classes="title")
+        yield Static(f"Current value: {'Yes' if self.initial else 'No'}", classes="current-value")
+        yield ListView(
+            ListItem(Static("Yes"), id="yes"),
+            ListItem(Static("No"), id="no"),
+            id="yesno_menu"
+        )
+        yield Static("[Enter] to select, [Esc] to cancel", classes="help")
+
+    async def on_mount(self) -> None:
+        self.query_one("#yesno_menu").index = 0 if self.initial else 1
+        self.query_one("#yesno_menu").focus()
+
+    async def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if event.item.id == "yes":
+            self.value = True
+            if self.callback:
+                self.callback(self.value)
+            self.dismiss()
+        elif event.item.id == "no":
+            self.value = False
+            if self.callback:
+                self.callback(self.value)
+            self.dismiss()
+
+    async def on_key(self, event: events.Key) -> None:
+        if event.key == "escape":
+            if self.callback:
+                self.callback(None)
+            self.dismiss()
+
+
+def run():
+    from logic.logging_config import configure_logging
+    from cli.globals import cli_args
+    configure_logging(level=cli_args.get('log_level', 0), log_file='a2pcli.log')
+    MainMenuApp().run()

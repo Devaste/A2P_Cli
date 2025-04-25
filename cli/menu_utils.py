@@ -1,6 +1,12 @@
 import os
 from typing import Callable, Optional, Any
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
+from rich import box
 from .config import OPTION_DESCRIPTIONS
+
+console = Console()
 
 def clear_screen():
     """Clear the terminal screen in a cross-platform way."""
@@ -19,8 +25,10 @@ def print_option(index: int, key: str, value: Any, extra: Optional[str] = None) 
     extra_str = f" {extra}" if extra else ''
     print(f"{index}. {desc}: {value}{extra_str}")
 
+def print_error(msg: str):
+    console.print(Panel(Text(msg, style="bold yellow"), style="red", expand=False, box=box.MINIMAL), justify="center")
 
-def get_validated_input(prompt: str, default: Optional[Any] = None, validator: Optional[Callable[[Any], bool]] = None) -> Any:
+def get_validated_input(prompt: str, default: Optional[Any] = None, validator: Optional[Callable[[Any], bool]] = None) -> Optional[Any]:
     """
     Prompt user for input, applying a validator and supporting defaults.
     Args:
@@ -28,7 +36,7 @@ def get_validated_input(prompt: str, default: Optional[Any] = None, validator: O
         default: Default value if user enters nothing.
         validator (callable|None): Function to validate input. Should return True for valid.
     Returns:
-        User input (possibly default), validated.
+        User input (possibly default), validated, or None if invalid.
     """
     while True:
         val = input(f"{prompt} " + (f"[default: {default}] " if default else ""))
@@ -40,6 +48,6 @@ def get_validated_input(prompt: str, default: Optional[Any] = None, validator: O
                     return val
             except Exception:
                 pass
-            print("Invalid input. Please try again.")
+            return None  # Instead of printing error, return None to signal invalid input
         else:
             return val

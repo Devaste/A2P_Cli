@@ -6,6 +6,8 @@ except ImportError:
 from pathlib import Path
 from PIL import Image
 import math
+import logging
+import traceback
 
 def is_greyscale(img):
     """Check if a PIL Image is greyscale."""
@@ -44,41 +46,36 @@ def quantize_and_save(img, png_file, colors: int, mode: str, silent: bool, label
     method = int(kwargs.pop('method', 2))
     dither = int(kwargs.pop('dither', 1))
     if kwargs:
-        print(f"Warning: Unexpected keyword arguments received: {', '.join(kwargs.keys())}")
+        logging.warning(f"Unexpected keyword arguments received: {', '.join(kwargs.keys())}")
     img_q = img.convert(mode).quantize(colors=int(colors), method=method, dither=dither)
     img_q.save(png_file, 'PNG', optimize=True)
-    if not silent:
-        print(f"[{label}] Converted: {png_file.name}")
+    # if not silent:
+    #     print(f"[{label}] Converted: {png_file.name}")
 
 def save_image(img, png_file, silent, label):
     img.save(png_file, 'PNG', optimize=True)
-    if not silent:
-        print(f"[{label}] Converted: {png_file.name}")
+    # if not silent:
+    #     print(f"[{label}] Converted: {png_file.name}")
 
 
 def convert_single_image(avif_file, png_file, silent, chk_bit=False, **kwargs):
-    """
-    Convert a single AVIF file to PNG, using quantization flags if provided.
-    Quantization bitness is limited to 1–8 (2–256 colors/levels) due to PIL's quantize() and PNG palette limitations.
-    See PIL.Image.quantize documentation: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.quantize
-    """
-    qb_color = kwargs.pop('qb_color', None)
-    qb_gray_color = kwargs.pop('qb_gray_color', None)
-    qb_gray = kwargs.pop('qb_gray', None)
-    method = kwargs.pop('method', 2)
-    dither = kwargs.pop('dither', 1)
-
-    if kwargs:
-        unexpected = ', '.join(kwargs.keys())
-        print(f"Warning: Unexpected keyword arguments received: {unexpected}")
-
-    for flag, value in [('qb_color', qb_color), ('qb_gray_color', qb_gray_color), ('qb_gray', qb_gray)]:
-        if value is not None and (value < 1 or value > 8):
-            print(f"Error: {flag} must be between 1 and 8 (got {value}). This is due to PNG and PIL quantize() limitations.")
-            print("See: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.quantize")
-            return False
-
     try:
+        qb_color = kwargs.pop('qb_color', None)
+        qb_gray_color = kwargs.pop('qb_gray_color', None)
+        qb_gray = kwargs.pop('qb_gray', None)
+        method = kwargs.pop('method', 2)
+        dither = kwargs.pop('dither', 1)
+
+        if kwargs:
+            unexpected = ', '.join(kwargs.keys())
+            logging.warning(f"Unexpected keyword arguments received: {unexpected}")
+
+        for flag, value in [('qb_color', qb_color), ('qb_gray_color', qb_gray_color), ('qb_gray', qb_gray)]:
+            if value is not None and (value < 1 or value > 8):
+                logging.error(f"{flag} must be between 1 and 8 (got {value}). This is due to PNG and PIL quantize() limitations.")
+                logging.error("See: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.quantize")
+                return False
+
         with Image.open(avif_file) as img:
             if is_greyscale(img):
                 if qb_gray is not None:
@@ -86,23 +83,23 @@ def convert_single_image(avif_file, png_file, silent, chk_bit=False, **kwargs):
                     if chk_bit:
                         with Image.open(png_file) as out_img:
                             n_colors, bit_count = get_real_bit_count(out_img)
-                            print(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
+                            logging.debug(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
                     return True
                 if qb_gray_color is not None:
                     quantize_and_save(img, png_file, int(2**qb_gray_color), "L", silent, f"GREYSCALE+ONE {2**qb_gray_color} levels", method=method, dither=dither)
                     if chk_bit:
                         with Image.open(png_file) as out_img:
                             n_colors, bit_count = get_real_bit_count(out_img)
-                            print(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
+                            logging.debug(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
                     return True
                 img_4bit = quantize_4bit_gui(img)
                 img_4bit.save(png_file, 'PNG', optimize=True)
-                if not silent:
-                    print(f"[GREYSCALE 4bit GUI] Converted: {png_file.name}")
+                # if not silent:
+                #     print(f"[GREYSCALE 4bit GUI] Converted: {png_file.name}")
                 if chk_bit:
                     with Image.open(png_file) as out_img:
                         n_colors, bit_count = get_real_bit_count(out_img)
-                        print(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
+                        logging.debug(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
                 return True
             # Color image
             if qb_color is not None:
@@ -110,17 +107,17 @@ def convert_single_image(avif_file, png_file, silent, chk_bit=False, **kwargs):
                 if chk_bit:
                     with Image.open(png_file) as out_img:
                         n_colors, bit_count = get_real_bit_count(out_img)
-                        print(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
+                        logging.debug(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
                 return True
             save_image(img, png_file, silent, "COLOR")
             if chk_bit:
                 with Image.open(png_file) as out_img:
                     n_colors, bit_count = get_real_bit_count(out_img)
-                    print(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
+                    logging.debug(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
             return True
     except Exception as e:
-        if not silent:
-            print(f"Failed to convert {avif_file.name}: {e}")
+        logging.error(f"Exception in convert_single_image for {avif_file}: {e}\n{traceback.format_exc()}")
+        # print(f"[FATAL] Exception in convert_single_image for {avif_file}: {e}")
         return False
 
 def handle_single_conversion(avif_file, output_path, recursive, silent, replace, qb_color, qb_gray_color, qb_gray):
@@ -131,31 +128,29 @@ def handle_single_conversion(avif_file, output_path, recursive, silent, replace,
     return converted
 
 
-def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=False, silent=False, qb_color=None, qb_gray_color=None, qb_gray=None, **kwargs):
-    """
-    Convert all .avif images in a directory (optionally recursively) to .png format.
-    Greyscale images are quantized to 16 levels by default.
-    Supports custom quantization via CLI flags.
-    Optionally deletes originals, supports custom output dir and silent mode.
-    Accepts extra kwargs (e.g., method, dither) for advanced options.
-    """
+def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=False, silent=False, qb_color=None, qb_gray_color=None, qb_gray=None, progress_callback=None, **kwargs):
     input_path = Path(input_dir)
     if not input_path.exists():
+        logging.error(f"Input directory '{input_dir}' does not exist.")
         raise FileNotFoundError(f"Input directory '{input_dir}' does not exist.")
     output_path = Path(output_dir) if output_dir else input_path
     output_path.mkdir(parents=True, exist_ok=True)
     avif_files = find_avif_files(input_path, recursive)
     if not avif_files:
-        print("No .avif files found in the input directory.")
+        logging.warning("No .avif files found in the input directory.")
         return
     success = 0
     fail = 0
-    for avif_file in avif_files:
-        if recursive:
+    total = len(avif_files)
+    for idx, avif_file in enumerate(avif_files, 1):
+        if recursive and output_dir:
+            # Mirror folder structure inside output_dir
             rel_path = avif_file.parent.relative_to(input_path)
-            target_dir = output_path / rel_path
-            target_dir.mkdir(parents=True, exist_ok=True)
-            png_file = target_dir / (avif_file.stem + '.png')
+            target_folder = output_path / rel_path
+            target_folder.mkdir(parents=True, exist_ok=True)
+            png_file = target_folder / (avif_file.stem + '.png')
+        elif recursive:
+            png_file = avif_file.parent / (avif_file.stem + '.png')
         else:
             png_file = output_path / (avif_file.stem + '.png')
         converted = convert_single_image(avif_file, png_file, silent, qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray, **kwargs)
@@ -165,12 +160,14 @@ def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=Fal
             success += 1
         else:
             fail += 1
-    print_summary(success, fail, silent)
+        if progress_callback:
+            progress_callback(idx, total)
+    # logging.info(f"Conversion summary: success={success}, fail={fail}")
 
 def print_summary(success, fail, silent):
     """Print a summary of the conversion results."""
-    msg = f"Done: {success} converted, {fail} failed." if silent else f"Conversion finished. Success: {success}, Failed: {fail}"
-    print(msg)
+    # msg = f"Done: {success} converted, {fail} failed." if silent else f"Conversion finished. Success: {success}, Failed: {fail}"
+    # print(msg)
 
 def remove_original_file(avif_file):
     """Remove the original AVIF file after conversion."""
@@ -178,7 +175,7 @@ def remove_original_file(avif_file):
 
 def check_and_prepare_dirs(input_path, output_path):
     if not input_path.is_dir():
-        print(f"Input directory '{input_path}' does not exist.")
+        logging.error(f"Input directory '{input_path}' does not exist.")
         return False
     output_path.mkdir(parents=True, exist_ok=True)
     return True
