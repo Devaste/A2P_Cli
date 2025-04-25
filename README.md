@@ -97,3 +97,6 @@ python main.py --check-update
 ---
 
 For more, see `python main.py -h` or `a2pcli -h` for MAN-style help with all options and examples.
+
+Contributors:
+JNANEU - Tester
