@@ -9,7 +9,7 @@ from logic.update_check import check_for_update
 from logic.convert import convert_avif_to_png
 from logic.logging_config import log_call
 from cli.globals import cli_args, STATUS_COLORS
-from cli.options_io import save_options
+from cli.options_io import save_options, load_options
 import threading
 CANCELED_MSG = "Canceled."
 
@@ -489,4 +489,7 @@ class YesNoDialog(ModalScreen):
 
 @log_call
 def run():
+    # Load [TUI] options from options.ini at startup
+    from cli.globals import cli_args
+    cli_args.update(load_options('TUI'))
     MainMenuApp().run()
