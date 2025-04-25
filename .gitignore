@@ -17,3 +17,4 @@ env/
 .DS_Store
 Thumbs.db
 /options.ini
+/a2pcli.log

@@ -10,7 +10,6 @@ from logic.convert import convert_avif_to_png
 from cli.globals import cli_args, STATUS_COLORS
 from cli.options_io import save_options
 import threading
-import traceback
 
 CANCELED_MSG = "Canceled."
 
@@ -300,7 +299,7 @@ class EditOptionsScreen(Screen):
 
     async def handle_back(self):
         save_options("TUI", {k: v for k, v in cli_args.items() if k not in ("input_dir", "output_dir", "log", "version", "check_update")})
-        await self.app.pop_screen()
+        self.app.pop_screen()
         # Show status in main menu after returning
         main_app = self.app if hasattr(self, 'app') else None
         if main_app and hasattr(main_app, 'update_status'):
@@ -456,6 +455,4 @@ class YesNoDialog(ModalScreen):
 
 
 def run():
-    from logic.update_check import check_for_update
-    from cli.globals import cli_args
     MainMenuApp().run()
