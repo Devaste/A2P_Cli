@@ -9,7 +9,7 @@ def parse_cli_args():
     parser = argparse.ArgumentParser(description="A2P_Cli: AVIF to PNG Converter")
     parser.add_argument("input_dir", type=str, nargs="?", help="Directory or file to convert (required unless --version or --check-update)")
     parser.add_argument("--output_dir", type=str, default=None, help="Directory to save .png files (default: same as input)")
-    parser.add_argument("--replace", action="store_true", help="Remove original .avif files after conversion")
+    parser.add_argument("--remove", action="store_true", help="Remove original .avif files after conversion")
     parser.add_argument("--recursive", action="store_true", help="Recursively search for .avif files in subdirectories")
     parser.add_argument("--silent", action="store_true", help="No output to command line, only finishing result")
     parser.add_argument("--qb_color", type=int, help="Quantization bits for color images (1–8)")

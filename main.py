@@ -1,6 +1,6 @@
 import sys
 
-from cli.main_menu import run as main_menu_run
+from cli.tui_mode import run as main_menu_run
 from cli.script_mode import run as script_mode_run
 
 def main():

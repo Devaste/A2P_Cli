@@ -10,12 +10,12 @@ def run():
     if args is None:
         print("[Error] No CLI arguments provided.")
         sys.exit(1)
-    configure_logging(args.log)
-    if getattr(args, 'version', False):
+    configure_logging(args['log'])
+    if args.get('version', False):
         from logic.update_check import get_local_version
         print(f"A2P_Cli version: {get_local_version()}")
         return
-    if getattr(args, 'check_update', False):
+    if args.get('check_update', False):
         from logic.update_check import get_local_version, get_latest_version
         local = get_local_version()
         latest = get_latest_version()
@@ -24,8 +24,8 @@ def run():
         else:
             print(f"Update available: {latest} (You have {local})")
         return
-    input_path = Path(args.input_dir)
-    if input_path.is_file() and getattr(args, 'chk_bit', False):
+    input_path = Path(args['input_dir'])
+    if input_path.is_file() and args.get('chk_bit', False):
         try:
             with Image.open(input_path) as img:
                 n_colors, bit_count = get_real_bit_count(img)
@@ -33,17 +33,24 @@ def run():
         except Exception as e:
             print(f"Error reading {input_path}: {e}")
         sys.exit(0)
-    convert_avif_to_png(
-        args.input_dir,
-        output_dir=args.output_dir,
-        replace=args.replace,
-        recursive=args.recursive,
-        silent=args.silent,
-        qb_color=args.qb_color,
-        qb_gray_color=args.qb_gray_color,
-        qb_gray=args.qb_gray,
-        method=args.method,
-        dither=args.dither,
-        log_level=args.log,
-        chk_bit=args.chk_bit
+    result = convert_avif_to_png(
+        args['input_dir'],
+        output_dir=args['output_dir'],
+        remove=args['remove'],
+        recursive=args['recursive'],
+        silent=args['silent'],
+        qb_color=args['qb_color'],
+        qb_gray_color=args['qb_gray_color'],
+        qb_gray=args['qb_gray'],
+        method=args['method'],
+        dither=args['dither'],
+        log_level=args['log'],
+        chk_bit=args['chk_bit'],
+        progress_printer=print
     )
+    # Print summary unless silent
+    if not args['silent']:
+        if result is not None and isinstance(result, dict):
+            print(f"Conversion finished. Success: {result.get('success', 0)}, Failed: {result.get('fail', 0)}")
+        else:
+            print("Conversion finished.")

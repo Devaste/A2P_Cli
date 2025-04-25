@@ -8,6 +8,7 @@ from PIL import Image
 import math
 import logging
 import traceback
+import numpy as np
 
 def is_greyscale(img):
     """Check if a PIL Image is greyscale."""
@@ -33,8 +34,8 @@ def get_real_bit_count(img):
         bit_count = 0
     return n_colors, bit_count
 
-def quantize_4bit_gui(img):
-    """Quantize a greyscale image to 16 colors using PIL's quantize (GUI logic)."""
+def quantize_4bit(img):
+    """Quantize a greyscale image to 16 colors using PIL's quantize (4-bit)."""
     return img.convert("L").quantize(colors=16, method=2, dither=1)
 
 def find_avif_files(input_path, recursive):
@@ -42,23 +43,35 @@ def find_avif_files(input_path, recursive):
     pattern = '**/*.avif' if recursive else '*.avif'
     return list(input_path.glob(pattern))
 
-def quantize_and_save(img, png_file, colors: int, mode: str, silent: bool, label: str, **kwargs):
+def quantize_and_save(img, png_file, colors: int, mode: str, silent: bool, label: str, progress_printer=None, **kwargs):
     method = int(kwargs.pop('method', 2))
     dither = int(kwargs.pop('dither', 1))
     if kwargs:
         logging.warning(f"Unexpected keyword arguments received: {', '.join(kwargs.keys())}")
     img_q = img.convert(mode).quantize(colors=int(colors), method=method, dither=dither)
     img_q.save(png_file, 'PNG', optimize=True)
-    # if not silent:
-    #     print(f"[{label}] Converted: {png_file.name}")
+    if not silent and progress_printer:
+        progress_printer(f"[{label}] Converted: {png_file.name}")
 
-def save_image(img, png_file, silent, label):
+def save_image(img, png_file, silent, label, progress_printer=None):
     img.save(png_file, 'PNG', optimize=True)
-    # if not silent:
-    #     print(f"[{label}] Converted: {png_file.name}")
+    if not silent and progress_printer:
+        progress_printer(f"[{label}] Converted: {png_file.name}")
 
+def classify_image_type(img):
+    """Classify image as 'grayscale', 'grayscale+one', or 'color' using numpy."""
+    arr = np.array(img.convert('RGBA'))
+    r, g, b, a = arr[...,0], arr[...,1], arr[...,2], arr[...,3]
+    # Grayscale: all RGB channels are equal everywhere
+    if np.all((r == g) & (g == b)):
+        # Grayscale+one: check for a single unique color (besides gray)
+        unique_colors = np.unique(arr[...,:3].reshape(-1, 3), axis=0)
+        if unique_colors.shape[0] == 2:
+            return 'grayscale+one'
+        return 'grayscale'
+    return 'color'
 
-def convert_single_image(avif_file, png_file, silent, chk_bit=False, **kwargs):
+def convert_single_image(avif_file, png_file, silent, chk_bit=False, progress_printer=None, **kwargs):
     try:
         qb_color = kwargs.pop('qb_color', None)
         qb_gray_color = kwargs.pop('qb_gray_color', None)
@@ -68,67 +81,55 @@ def convert_single_image(avif_file, png_file, silent, chk_bit=False, **kwargs):
 
         if kwargs:
             unexpected = ', '.join(kwargs.keys())
-            logging.warning(f"Unexpected keyword arguments received: {unexpected}")
-
-        for flag, value in [('qb_color', qb_color), ('qb_gray_color', qb_gray_color), ('qb_gray', qb_gray)]:
-            if value is not None and (value < 1 or value > 8):
-                logging.error(f"{flag} must be between 1 and 8 (got {value}). This is due to PNG and PIL quantize() limitations.")
-                logging.error("See: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.quantize")
-                return False
+            logging.warning(f"Unexpected keyword arguments: {unexpected}")
 
         with Image.open(avif_file) as img:
-            if is_greyscale(img):
-                if qb_gray is not None:
-                    quantize_and_save(img, png_file, int(2**qb_gray), "L", silent, f"GREYSCALE {2**qb_gray} levels", method=method, dither=dither)
-                    if chk_bit:
-                        with Image.open(png_file) as out_img:
-                            n_colors, bit_count = get_real_bit_count(out_img)
-                            logging.debug(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
-                    return True
-                if qb_gray_color is not None:
-                    quantize_and_save(img, png_file, int(2**qb_gray_color), "L", silent, f"GREYSCALE+ONE {2**qb_gray_color} levels", method=method, dither=dither)
-                    if chk_bit:
-                        with Image.open(png_file) as out_img:
-                            n_colors, bit_count = get_real_bit_count(out_img)
-                            logging.debug(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
-                    return True
-                img_4bit = quantize_4bit_gui(img)
-                img_4bit.save(png_file, 'PNG', optimize=True)
-                # if not silent:
-                #     print(f"[GREYSCALE 4bit GUI] Converted: {png_file.name}")
-                if chk_bit:
-                    with Image.open(png_file) as out_img:
-                        n_colors, bit_count = get_real_bit_count(out_img)
-                        logging.debug(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
-                return True
-            # Color image
-            if qb_color is not None:
-                quantize_and_save(img, png_file, int(2**qb_color), "RGB", silent, f"COLOR {2**qb_color} colors", method=method, dither=dither)
-                if chk_bit:
-                    with Image.open(png_file) as out_img:
-                        n_colors, bit_count = get_real_bit_count(out_img)
-                        logging.debug(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
-                return True
-            save_image(img, png_file, silent, "COLOR")
+            img_type = classify_image_type(img)
+            # Use user-supplied quantization if provided, else defaults
+            if img_type == 'grayscale+one':
+                quant = qb_gray_color if qb_gray_color is not None else 8
+                quantize_and_save(img, png_file, quant, "P", silent, "GREYSCALE+ONE", progress_printer, method=method, dither=dither)
+                label = "GREYSCALE+ONE"
+            elif img_type == 'grayscale':
+                quant = qb_gray if qb_gray is not None else 4
+                quantize_and_save(img, png_file, quant, "L", silent, "GREYSCALE", progress_printer, method=method, dither=dither)
+                label = "GREYSCALE"
+            else:  # color
+                if qb_color:
+                    quantize_and_save(img, png_file, qb_color, "P", silent, "FULL COLOR", progress_printer, method=method, dither=dither)
+                    label = "FULL COLOR"
+                else:
+                    save_image(img, png_file, silent, "FULL COLOR", progress_printer)
+                    label = "FULL COLOR"
+
+            # CHK_BIT: Only print in script mode (progress_printer==print)
             if chk_bit:
-                with Image.open(png_file) as out_img:
-                    n_colors, bit_count = get_real_bit_count(out_img)
-                    logging.debug(f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits")
+                try:
+                    with Image.open(png_file) as out_img:
+                        n_colors, bit_count = get_real_bit_count(out_img)
+                        chk_msg = f"[CHK_BIT] {png_file.name}: {n_colors} colors, ~{bit_count} bits"
+                        if progress_printer == print:
+                            print(chk_msg)
+                        else:
+                            logging.info(chk_msg)
+                except Exception as e:
+                    logging.error(f"CHK_BIT failed for {png_file}: {e}")
             return True
     except Exception as e:
         logging.error(f"Exception in convert_single_image for {avif_file}: {e}\n{traceback.format_exc()}")
-        # print(f"[FATAL] Exception in convert_single_image for {avif_file}: {e}")
         return False
 
-def handle_single_conversion(avif_file, output_path, recursive, silent, replace, qb_color, qb_gray_color, qb_gray):
+def handle_single_conversion(avif_file, output_path, recursive, silent, remove, qb_color, qb_gray_color, qb_gray, progress_printer=None):
     png_file = (avif_file.parent if recursive else output_path) / (avif_file.stem + '.png')
-    converted = convert_single_image(avif_file, png_file, silent, qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray)
-    if converted and replace:
-        remove_original_file(avif_file)
+    converted = convert_single_image(avif_file, png_file, silent, qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray, progress_printer=progress_printer)
+    if converted and remove:
+        try:
+            remove_original_file(avif_file)
+        except Exception as e:
+            print(f"[WARN] Failed to remove {avif_file}: {e}")
     return converted
 
-
-def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=False, silent=False, qb_color=None, qb_gray_color=None, qb_gray=None, progress_callback=None, **kwargs):
+def convert_avif_to_png(input_dir, output_dir=None, remove=False, recursive=False, silent=False, qb_color=None, qb_gray_color=None, qb_gray=None, progress_callback=None, progress_printer=None, **kwargs):
     input_path = Path(input_dir)
     if not input_path.exists():
         logging.error(f"Input directory '{input_dir}' does not exist.")
@@ -137,37 +138,40 @@ def convert_avif_to_png(input_dir, output_dir=None, replace=False, recursive=Fal
     output_path.mkdir(parents=True, exist_ok=True)
     avif_files = find_avif_files(input_path, recursive)
     if not avif_files:
-        logging.warning("No .avif files found in the input directory.")
-        return
-    success = 0
-    fail = 0
+        logging.warning(f"No AVIF files found in '{input_dir}'.")
+        return {"success": 0, "fail": 0}
+    success, fail = 0, 0
     total = len(avif_files)
     for idx, avif_file in enumerate(avif_files, 1):
         if recursive and output_dir:
-            # Mirror folder structure inside output_dir
             rel_path = avif_file.parent.relative_to(input_path)
             target_folder = output_path / rel_path
             target_folder.mkdir(parents=True, exist_ok=True)
             png_file = target_folder / (avif_file.stem + '.png')
         elif recursive:
             png_file = avif_file.parent / (avif_file.stem + '.png')
-        else:
+        elif output_dir:
             png_file = output_path / (avif_file.stem + '.png')
-        converted = convert_single_image(avif_file, png_file, silent, qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray, **kwargs)
+        else:
+            png_file = avif_file.parent / (avif_file.stem + '.png')
+        converted = convert_single_image(avif_file, png_file, silent, progress_printer=progress_printer, qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray, **kwargs)
         if converted:
-            if replace:
-                remove_original_file(avif_file)
+            if remove:
+                try:
+                    remove_original_file(avif_file)
+                except Exception as e:
+                    print(f"[WARN] Failed to remove {avif_file}: {e}")
             success += 1
         else:
             fail += 1
         if progress_callback:
             progress_callback(idx, total)
-    # logging.info(f"Conversion summary: success={success}, fail={fail}")
+    return {"success": success, "fail": fail}
 
 def print_summary(success, fail, silent):
     """Print a summary of the conversion results."""
-    # msg = f"Done: {success} converted, {fail} failed." if silent else f"Conversion finished. Success: {success}, Failed: {fail}"
-    # print(msg)
+    msg = f"Done: {success} converted, {fail} failed." if silent else f"Conversion finished. Success: {success}, Failed: {fail}"
+    print(msg)
 
 def remove_original_file(avif_file):
     """Remove the original AVIF file after conversion."""
