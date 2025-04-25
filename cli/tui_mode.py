@@ -5,12 +5,10 @@ from textual.reactive import reactive
 from textual import events
 from textual.screen import Screen, ModalScreen
 from rich.text import Text
-from logic.logging_config import configure_logging
 from logic.update_check import check_for_update
 from logic.convert import convert_avif_to_png
 from cli.globals import cli_args, STATUS_COLORS
 from cli.options_io import save_options
-import logging
 import threading
 import traceback
 
@@ -151,7 +149,6 @@ class MainMenuApp(App):
                     )
                     self.call_from_thread(self.update_status, "Conversion finished!", "SUCCESS")
                 except Exception as e:
-                    logging.error(f"Exception in run_conversion: {e}\n{traceback.format_exc()}")
                     self.call_from_thread(self.update_status, f"Exception during conversion: {e}", "ERROR")
             threading.Thread(target=run_conversion, daemon=True).start()
         elif action == "edit":
@@ -459,7 +456,6 @@ class YesNoDialog(ModalScreen):
 
 
 def run():
-    from logic.logging_config import configure_logging
+    from logic.update_check import check_for_update
     from cli.globals import cli_args
-    configure_logging(level=cli_args.get('log_level', 0), log_file='a2pcli.log')
     MainMenuApp().run()

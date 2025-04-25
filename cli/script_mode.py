@@ -1,7 +1,6 @@
 from cli.args import parse_cli_args
 from cli.options_io import load_options, save_options
 from logic.convert import convert_avif_to_png, get_real_bit_count
-from logic.logging_config import configure_logging
 from pathlib import Path
 from PIL import Image
 import sys
@@ -26,7 +25,6 @@ def run():
         save_options('CLI', save_dict)
         print("[INFO] CLI options saved to [CLI] block in options.ini.")
         sys.exit(0)
-    configure_logging(args['log'])
     if args.get('version', False):
         from logic.update_check import get_local_version
         print(f"A2P_Cli version: {get_local_version()}")
@@ -60,7 +58,6 @@ def run():
         qb_gray=args['qb_gray'],
         method=args['method'],
         dither=args['dither'],
-        log_level=args['log'],
         chk_bit=args['chk_bit'],
         progress_printer=print
     )

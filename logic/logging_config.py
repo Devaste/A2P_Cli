@@ -1,38 +1,33 @@
 import logging
-import os
+import functools
 
-LOG_LEVELS = {
-    0: None,           # No logging
-    1: logging.CRITICAL,
-    2: logging.ERROR,
-    3: logging.WARNING,
-    4: logging.DEBUG,
-}
-
-def configure_logging(level=4, log_file='a2pcli_debug.log'):
+def log_call(func):
     """
-    Configure logging for the application.
-    level: integer 0-4 (0 disables logging, 1=CRITICAL, 2=ERROR, 3=WARNING, 4=DEBUG)
-    If level is 0, disables logging and does not create a log file.
-    Uses force=True to ensure robust configuration in all environments.
-    Explicitly sets handler levels for reliability.
+    Decorator to log function entry, exit, arguments, and exceptions.
+    Handles both sync and async functions.
     """
-    logging.disable(logging.NOTSET)  # Re-enable logging globally
-    log_level = LOG_LEVELS.get(level, logging.ERROR)
-    if log_level is None:
-        logging.disable(logging.CRITICAL)
-        return
-    if log_file:
-        os.makedirs(os.path.dirname(log_file) or '.', exist_ok=True)
-        logging.basicConfig(
-            level=log_level,
-            format="%(asctime)s [%(levelname)s] %(message)s",
-            filename=log_file,
-            filemode="w",
-            force=True  # Always reconfigure handlers
-        )
-    root_logger = logging.getLogger()
-    root_logger.setLevel(log_level)
-    for handler in root_logger.handlers:
-        handler.setLevel(log_level)
-    logging.getLogger().addHandler(logging.StreamHandler())  # Optional: also log to stdout
+    if hasattr(func, "__code__") and func.__code__.co_flags & 0x80:
+        # Async function
+        @functools.wraps(func)
+        async def async_wrapper(*args, **kwargs):
+            logging.debug(f"[async] Entering {func.__qualname__} args={args} kwargs={kwargs}")
+            try:
+                result = await func(*args, **kwargs)
+                logging.debug(f"[async] Exiting {func.__qualname__} result={result}")
+                return result
+            except Exception as e:
+                logging.error(f"[async] Exception in {func.__qualname__}: {e}", exc_info=True)
+                raise
+        return async_wrapper
+    else:
+        @functools.wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            logging.debug(f"Entering {func.__qualname__} args={args} kwargs={kwargs}")
+            try:
+                result = func(*args, **kwargs)
+                logging.debug(f"Exiting {func.__qualname__} result={result}")
+                return result
+            except Exception as e:
+                logging.error(f"Exception in {func.__qualname__}: {e}", exc_info=True)
+                raise
+        return sync_wrapper
