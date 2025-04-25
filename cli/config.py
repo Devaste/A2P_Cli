@@ -30,7 +30,6 @@ OPTION_DESCRIPTIONS = {
     'dither': 'Dither: 0=None, 1=Floyd-Steinberg',
     'log_level': 'Set logging level: 0=off, 1=error, 2=warning, 3=info, 4=debug',
     'bit_depth': 'Bit depth for color images (8, 10, 12, 14, 16)',
-    'dither': 'Dither: 0=None, 1=Floyd-Steinberg',
     'chk_bit': 'Check and display real bit depth (unique color count) for each converted image or single file.',
 }
 

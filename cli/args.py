@@ -1,4 +1,4 @@
-from .config import DEFAULT_METHOD, DEFAULT_DITHER, DEFAULT_LOG_LEVEL
+from .config import DEFAULT_LOG_LEVEL
 from cli.globals import cli_args
 import argparse
 import sys
@@ -21,6 +21,8 @@ def parse_cli_args():
     parser.add_argument("--version", action="store_true", help="Show version and exit")
     parser.add_argument("--check-update", action="store_true", help="Check for updates and exit")
     parser.add_argument("--chk_bit", action="store_true",help="Check and display real bit depth (unique color count) for each converted image or single file.")
+    parser.add_argument("--save", action="store_true", help="Save current CLI options to the [CLI] block in options.ini and exit.")
+    parser.add_argument("--options", action="store_true", help="Load CLI options from the [CLI] block in options.ini (overrides other CLI args except input_dir).")
     args = parser.parse_args()
     # Enforce input_dir only if not version/check-update
     if not (args.version or args.check_update) and not args.input_dir:

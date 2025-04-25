@@ -16,4 +16,4 @@ env/
 # Miscellaneous
 .DS_Store
 Thumbs.db
-/a2pcli_debug.log
+/options.ini

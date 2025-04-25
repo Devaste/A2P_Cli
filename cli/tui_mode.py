@@ -8,10 +8,13 @@ from rich.text import Text
 from logic.logging_config import configure_logging
 from logic.update_check import check_for_update
 from logic.convert import convert_avif_to_png
-from cli.globals import cli_args, STATUS_COLORS, DEFAULT_QB_COLOR, DEFAULT_QB_GRAY_COLOR, DEFAULT_QB_GRAY
+from cli.globals import cli_args, STATUS_COLORS
+from cli.options_io import save_options
 import logging
 import threading
 import traceback
+
+CANCELED_MSG = "Canceled."
 
 def quant_bits_display_dynamic(val, label):
     if val == 0:
@@ -19,16 +22,16 @@ def quant_bits_display_dynamic(val, label):
     else:
         return f"Quantization bits ({label}): {val} ({2**val} levels)"
 
-def get_edit_menu_options(cli_args):
+def get_edit_menu_options(args):
     return [
         ("Input directory", "input_dir"),
         ("Output directory", "output_dir"),
         ("Remove originals?", "remove"),
         ("Recursive search?", "recursive"),
         ("Silent mode?", "silent"),
-        (quant_bits_display_dynamic(cli_args.get("qb_color", 0), "color"), "qb_color"),
-        (quant_bits_display_dynamic(cli_args.get("qb_gray_color", 0), "grayscale+one"), "qb_gray_color"),
-        (quant_bits_display_dynamic(cli_args.get("qb_gray", 0), "grayscale"), "qb_gray"),
+        (quant_bits_display_dynamic(args.get("qb_color", 0), "color"), "qb_color"),
+        (quant_bits_display_dynamic(args.get("qb_gray_color", 0), "grayscale+one"), "qb_gray_color"),
+        (quant_bits_display_dynamic(args.get("qb_gray", 0), "grayscale"), "qb_gray"),
         ("Quantization method", "method"),
         ("Dither", "dither"),
         ("Back to main menu", "back"),
@@ -151,10 +154,8 @@ class MainMenuApp(App):
                     logging.error(f"Exception in run_conversion: {e}\n{traceback.format_exc()}")
                     self.call_from_thread(self.update_status, f"Exception during conversion: {e}", "ERROR")
             threading.Thread(target=run_conversion, daemon=True).start()
-            return
         elif action == "edit":
             await self.push_screen(EditOptionsScreen())
-            return
         elif action == "update":
             check_for_update()
             self.update_status("Checked for updates.", "INFO")
@@ -170,12 +171,157 @@ class MainMenuApp(App):
     async def action_quit(self):
         self.exit()
 
-    async def action_quit(self):
-        self.exit()
-
 
 class EditOptionsScreen(Screen):
     status: reactive[str] = reactive("")
+
+    async def on_list_view_selected(self, event: ListView.Selected) -> None:
+        action = event.item.id
+        handler = self.ACTION_HANDLERS.get(action)
+        if handler:
+            await handler(self)
+
+    async def handle_input_dir(self):
+        def set_input_dir(val):
+            if val is not None and val.strip():
+                cli_args['input_dir'] = val.strip()
+                self.update_status(f"{MENU_ARG_TO_DISPLAY['input_dir']} set to: {cli_args['input_dir']}", "INFO")
+            elif val is not None:
+                self.update_status("Invalid input. Please try again.", "ERROR")
+        await self.app.push_screen(InputDialog("Enter input directory:", cli_args['input_dir'], callback=set_input_dir))
+
+    async def handle_output_dir(self):
+        def set_output_dir(val):
+            prev = cli_args.get('output_dir') or ''
+            new_val = val.strip() if val and val.strip() else None
+            if new_val != prev:
+                cli_args['output_dir'] = new_val
+                self.update_status(f"{MENU_ARG_TO_DISPLAY['output_dir']} set to: {cli_args['output_dir']}", "INFO")
+            else:
+                self.update_status("", "INFO")
+        await self.app.push_screen(InputDialog("Enter output directory (blank for same as input):", cli_args['output_dir'] or "", callback=set_output_dir))
+
+    async def handle_qb_color(self):
+        def set_qb_color(val):
+            prev = cli_args.get('qb_color')
+            if val is None:
+                self.update_status(CANCELED_MSG, "INFO")
+            else:
+                new_val = int(val) if val.strip() else 0
+                if new_val != prev:
+                    cli_args['qb_color'] = new_val
+                    self.update_status(quant_bits_display_dynamic(new_val, "color"), "INFO")
+                else:
+                    self.update_status("", "INFO")
+        await self.app.push_screen(InputDialog("Quantization bits for color images (1-8, blank/off for full color):", str(cli_args['qb_color']) if cli_args['qb_color'] else "", callback=set_qb_color))
+
+    async def handle_qb_gray_color(self):
+        def set_qb_gray_color(val):
+            prev = cli_args.get('qb_gray_color')
+            if val is None:
+                self.update_status(CANCELED_MSG, "INFO")
+            else:
+                new_val = int(val) if val.strip() else 0
+                if new_val != prev:
+                    cli_args['qb_gray_color'] = new_val
+                    self.update_status(quant_bits_display_dynamic(new_val, "grayscale+one"), "INFO")
+                else:
+                    self.update_status("", "INFO")
+        await self.app.push_screen(InputDialog("Quantization bits for grayscale+one images (1-8, blank/off for full color):", str(cli_args['qb_gray_color']) if cli_args['qb_gray_color'] else "", callback=set_qb_gray_color))
+
+    async def handle_qb_gray(self):
+        def set_qb_gray(val):
+            prev = cli_args.get('qb_gray')
+            if val is None:
+                self.update_status(CANCELED_MSG, "INFO")
+            else:
+                new_val = int(val) if val.strip() else 0
+                if new_val != prev:
+                    cli_args['qb_gray'] = new_val
+                    self.update_status(quant_bits_display_dynamic(new_val, "grayscale"), "INFO")
+                else:
+                    self.update_status("", "INFO")
+        await self.app.push_screen(InputDialog("Quantization bits for grayscale images (1-8, blank/off for full color):", str(cli_args['qb_gray']) if cli_args['qb_gray'] else "", callback=set_qb_gray))
+
+    async def handle_method(self):
+        def set_method(val):
+            prev = cli_args.get('method')
+            if val is None:
+                self.update_status(CANCELED_MSG, "INFO")
+            else:
+                new_val = int(val)
+                if new_val != prev:
+                    cli_args['method'] = new_val
+                    self.update_status(f"{MENU_ARG_TO_DISPLAY['method']} set to: {cli_args['method']}", "INFO")
+                else:
+                    self.update_status("", "INFO")
+        await self.app.push_screen(InputDialog("Quantization method (0=Median Cut, 1=Max Coverage, 2=Fast Octree):", str(cli_args['method']), callback=set_method))
+
+    async def handle_dither(self):
+        def set_dither(val):
+            prev = cli_args.get('dither')
+            if val is None:
+                self.update_status(CANCELED_MSG, "INFO")
+            else:
+                new_val = int(val)
+                if new_val != prev:
+                    cli_args['dither'] = new_val
+                    self.update_status(f"{MENU_ARG_TO_DISPLAY['dither']} set to: {cli_args['dither']}", "INFO")
+                else:
+                    self.update_status("", "INFO")
+        await self.app.push_screen(InputDialog("Dither (0=None, 1=Floyd-Steinberg):", str(cli_args['dither']), callback=set_dither))
+
+    async def handle_remove(self):
+        def set_remove(val):
+            prev = cli_args.get('remove')
+            if val != prev:
+                cli_args['remove'] = val
+                self.update_status(f"{MENU_ARG_TO_DISPLAY['remove']} set to: {cli_args['remove']}", "INFO")
+            else:
+                self.update_status("", "INFO")
+        await self.app.push_screen(YesNoDialog("Remove originals?", cli_args['remove'], callback=set_remove))
+
+    async def handle_recursive(self):
+        def set_recursive(val):
+            prev = cli_args.get('recursive')
+            if val != prev:
+                cli_args['recursive'] = val
+                self.update_status(f"{MENU_ARG_TO_DISPLAY['recursive']} set to: {cli_args['recursive']}", "INFO")
+            else:
+                self.update_status("", "INFO")
+        await self.app.push_screen(YesNoDialog("Recursive search?", cli_args['recursive'], callback=set_recursive))
+
+    async def handle_silent(self):
+        def set_silent(val):
+            prev = cli_args.get('silent')
+            if val != prev:
+                cli_args['silent'] = val
+                self.update_status(f"{MENU_ARG_TO_DISPLAY['silent']} set to: {cli_args['silent']}", "INFO")
+            else:
+                self.update_status("", "INFO")
+        await self.app.push_screen(YesNoDialog("Silent mode?", cli_args['silent'], callback=set_silent))
+
+    async def handle_back(self):
+        save_options("TUI", {k: v for k, v in cli_args.items() if k not in ("input_dir", "output_dir", "log", "version", "check_update")})
+        await self.app.pop_screen()
+        # Show status in main menu after returning
+        main_app = self.app if hasattr(self, 'app') else None
+        if main_app and hasattr(main_app, 'update_status'):
+            main_app.update_status("Options saved!", "SUCCESS")
+
+    ACTION_HANDLERS = {
+        "input_dir": lambda self: self.handle_input_dir(),
+        "output_dir": lambda self: self.handle_output_dir(),
+        "qb_color": lambda self: self.handle_qb_color(),
+        "qb_gray_color": lambda self: self.handle_qb_gray_color(),
+        "qb_gray": lambda self: self.handle_qb_gray(),
+        "method": lambda self: self.handle_method(),
+        "dither": lambda self: self.handle_dither(),
+        "remove": lambda self: self.handle_remove(),
+        "recursive": lambda self: self.handle_recursive(),
+        "silent": lambda self: self.handle_silent(),
+        "back": lambda self: self.handle_back(),
+    }
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -186,17 +332,17 @@ class EditOptionsScreen(Screen):
         yield StatusFooter()
 
     def refresh_options_list(self):
-        def get_option_value(action):
-            val = cli_args.get(action)
-            if action in ("remove", "recursive", "silent"):
+        def get_option_value(option_key):
+            val = cli_args.get(option_key)
+            if option_key in ("remove", "recursive", "silent"):
                 return "Yes" if val else "No"
-            elif action == "output_dir":
+            elif option_key == "output_dir":
                 # Show empty string if both output_dir and input_dir are blank/None
                 if not val:
-                    input_dir = cli_args.get("input_dir", "")
-                    if not input_dir:
+                    input_dir_val = cli_args.get("input_dir", "")
+                    if not input_dir_val:
                         return ""
-                    return input_dir
+                    return input_dir_val
                 return str(val)
             elif val is None:
                 return "(default)"
@@ -233,133 +379,6 @@ class EditOptionsScreen(Screen):
         self.query_one("#edit_menu_list").focus()
         self.update_status("")
         self.refresh_options_list()
-
-    async def on_list_view_selected(self, event: ListView.Selected) -> None:
-        action = event.item.id
-        if action == "input_dir":
-            def set_input_dir(val):
-                if val is not None and val.strip():
-                    cli_args['input_dir'] = val.strip()
-                    self.update_status(f"{MENU_ARG_TO_DISPLAY['input_dir']} set to: {cli_args['input_dir']}", "INFO")
-                elif val is not None:
-                    self.update_status("Invalid input. Please try again.", "ERROR")
-            await self.app.push_screen(InputDialog("Enter input directory:", cli_args['input_dir'], callback=set_input_dir))
-            return
-        elif action == "output_dir":
-            def set_output_dir(val):
-                prev = cli_args.get('output_dir') or ''
-                new_val = val.strip() if val and val.strip() else None
-                if new_val != prev:
-                    cli_args['output_dir'] = new_val
-                    self.update_status(f"{MENU_ARG_TO_DISPLAY['output_dir']} set to: {cli_args['output_dir']}", "INFO")
-                else:
-                    self.update_status("", "INFO")
-            await self.app.push_screen(InputDialog("Enter output directory (blank for same as input):", cli_args['output_dir'] or "", callback=set_output_dir))
-            return
-        elif action == "qb_color":
-            def set_qb_color(val):
-                prev = cli_args.get('qb_color')
-                if val is None:
-                    self.update_status("Canceled.", "INFO")
-                    return
-                new_val = int(val) if val.strip() else 0
-                if new_val != prev:
-                    cli_args['qb_color'] = new_val
-                    self.update_status(quant_bits_display_dynamic(new_val, "color"), "INFO")
-                else:
-                    self.update_status("", "INFO")
-            await self.app.push_screen(InputDialog("Quantization bits for color images (1-8, blank/off for full color):", str(cli_args['qb_color']) if cli_args['qb_color'] else "", callback=set_qb_color))
-            return
-        elif action == "qb_gray_color":
-            def set_qb_gray_color(val):
-                prev = cli_args.get('qb_gray_color')
-                if val is None:
-                    self.update_status("Canceled.", "INFO")
-                    return
-                new_val = int(val) if val.strip() else 0
-                if new_val != prev:
-                    cli_args['qb_gray_color'] = new_val
-                    self.update_status(quant_bits_display_dynamic(new_val, "grayscale+one"), "INFO")
-                else:
-                    self.update_status("", "INFO")
-            await self.app.push_screen(InputDialog("Quantization bits for grayscale+one images (1-8, blank/off for full color):", str(cli_args['qb_gray_color']) if cli_args['qb_gray_color'] else "", callback=set_qb_gray_color))
-            return
-        elif action == "qb_gray":
-            def set_qb_gray(val):
-                prev = cli_args.get('qb_gray')
-                if val is None:
-                    self.update_status("Canceled.", "INFO")
-                    return
-                new_val = int(val) if val.strip() else 0
-                if new_val != prev:
-                    cli_args['qb_gray'] = new_val
-                    self.update_status(quant_bits_display_dynamic(new_val, "grayscale"), "INFO")
-                else:
-                    self.update_status("", "INFO")
-            await self.app.push_screen(InputDialog("Quantization bits for grayscale images (1-8, blank/off for full color):", str(cli_args['qb_gray']) if cli_args['qb_gray'] else "", callback=set_qb_gray))
-            return
-        elif action == "method":
-            def set_method(val):
-                prev = cli_args.get('method')
-                if val is None:
-                    self.update_status("Canceled.", "INFO")
-                    return
-                new_val = int(val)
-                if new_val != prev:
-                    cli_args['method'] = new_val
-                    self.update_status(f"{MENU_ARG_TO_DISPLAY['method']} set to: {cli_args['method']}", "INFO")
-                else:
-                    self.update_status("", "INFO")
-            await self.app.push_screen(InputDialog("Quantization method (0=Median Cut, 1=Max Coverage, 2=Fast Octree):", str(cli_args['method']), callback=set_method))
-            return
-        elif action == "dither":
-            def set_dither(val):
-                prev = cli_args.get('dither')
-                if val is None:
-                    self.update_status("Canceled.", "INFO")
-                    return
-                new_val = int(val)
-                if new_val != prev:
-                    cli_args['dither'] = new_val
-                    self.update_status(f"{MENU_ARG_TO_DISPLAY['dither']} set to: {cli_args['dither']}", "INFO")
-                else:
-                    self.update_status("", "INFO")
-            await self.app.push_screen(InputDialog("Dither (0=None, 1=Floyd-Steinberg):", str(cli_args['dither']), callback=set_dither))
-            return
-        elif action == "remove":
-            def set_remove(val):
-                prev = cli_args.get('remove')
-                if val != prev:
-                    cli_args['remove'] = val
-                    self.update_status(f"{MENU_ARG_TO_DISPLAY['remove']} set to: {cli_args['remove']}", "INFO")
-                else:
-                    self.update_status("", "INFO")
-            await self.app.push_screen(YesNoDialog("Remove originals?", cli_args['remove'], callback=set_remove))
-            return
-        elif action == "recursive":
-            def set_recursive(val):
-                prev = cli_args.get('recursive')
-                if val != prev:
-                    cli_args['recursive'] = val
-                    self.update_status(f"{MENU_ARG_TO_DISPLAY['recursive']} set to: {cli_args['recursive']}", "INFO")
-                else:
-                    self.update_status("", "INFO")
-            await self.app.push_screen(YesNoDialog("Recursive search?", cli_args['recursive'], callback=set_recursive))
-            return
-        elif action == "silent":
-            def set_silent(val):
-                prev = cli_args.get('silent')
-                if val != prev:
-                    cli_args['silent'] = val
-                    self.update_status(f"{MENU_ARG_TO_DISPLAY['silent']} set to: {cli_args['silent']}", "INFO")
-                else:
-                    self.update_status("", "INFO")
-            await self.app.push_screen(YesNoDialog("Silent mode?", cli_args['silent'], callback=set_silent))
-            return
-        elif action == "back":
-            self.update_status("Options saved!", "SUCCESS")
-            await self.app.pop_screen()
-            return
 
     async def on_key(self, event: events.Key) -> None:
         if event.key == "backspace":

@@ -1,4 +1,5 @@
 from cli.args import parse_cli_args
+from cli.options_io import load_options, save_options
 from logic.convert import convert_avif_to_png, get_real_bit_count
 from logic.logging_config import configure_logging
 from pathlib import Path
@@ -10,6 +11,21 @@ def run():
     if args is None:
         print("[Error] No CLI arguments provided.")
         sys.exit(1)
+
+    # Handle --save and --options logic
+    if args.get('options', False):
+        # Load CLI options from file, but always use provided input_dir if given
+        file_opts = load_options('CLI')
+        # Only override if not provided in CLI
+        for k, v in file_opts.items():
+            if k != 'input_dir' and (args.get(k) is None or args.get(k) == '' or args.get(k) == False):
+                args[k] = v
+    if args.get('save', False):
+        # Save current CLI args (except --save/--options themselves)
+        save_dict = {k: v for k, v in args.items() if k not in ('save', 'options')}
+        save_options('CLI', save_dict)
+        print("[INFO] CLI options saved to [CLI] block in options.ini.")
+        sys.exit(0)
     configure_logging(args['log'])
     if args.get('version', False):
         from logic.update_check import get_local_version
