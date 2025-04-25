@@ -7,18 +7,20 @@ from textual.screen import Screen, ModalScreen
 from rich.text import Text
 from logic.update_check import check_for_update
 from logic.convert import convert_avif_to_png
+from logic.logging_config import log_call
 from cli.globals import cli_args, STATUS_COLORS
 from cli.options_io import save_options
 import threading
-
 CANCELED_MSG = "Canceled."
 
+@log_call
 def quant_bits_display_dynamic(val, label):
     if val == 0:
         return f"Quantization bits ({label}): off (full color)"
     else:
         return f"Quantization bits ({label}): {val} ({2**val} levels)"
 
+@log_call
 def get_edit_menu_options(args):
     return [
         ("Input directory", "input_dir"),
@@ -56,6 +58,7 @@ OPTION_VALIDATORS = {
     "dither": lambda v: int(v),
 }
 
+@log_call
 def get_validated_input(prompt, default, validator):
     while True:
         val = input(prompt + " [" + str(default) + "]: ")
@@ -70,11 +73,13 @@ class StatusFooter(Footer):
     status: reactive[str] = reactive("")
     status_type: reactive[str] = reactive("INFO")
 
+    @log_call
     def set_status(self, msg: str, status_type: str = "INFO"):
         self.status = msg
         self.status_type = status_type
         self.refresh()
 
+    @log_call
     def render(self):
         color = STATUS_COLORS.get(self.status_type, "yellow")
         msg = self.status or ""
@@ -91,6 +96,7 @@ class MainMenuApp(App):
     progress: reactive[int] = reactive(0)
     progress_total: reactive[int] = reactive(1)
 
+    @log_call
     def compose(self) -> ComposeResult:
         yield Header()
         yield Vertical(
@@ -101,10 +107,12 @@ class MainMenuApp(App):
         )
         yield StatusFooter()
 
+    @log_call
     async def on_mount(self) -> None:
         self.query_one("#menu_list").focus()
         self.update_status("")
 
+    @log_call
     def update_status(self, msg: str, status_type: str = "INFO"):
         # Update the status message with the given status type.
         # Usage: self.update_status("Conversion finished!", "SUCCESS")
@@ -117,6 +125,7 @@ class MainMenuApp(App):
         except Exception:
             pass
 
+    @log_call
     async def on_list_view_selected(self, event: ListView.Selected) -> None:
         action = event.item.id
         if action == "start":
@@ -158,12 +167,14 @@ class MainMenuApp(App):
         elif action == "quit":
             await self.action_quit()
 
+    @log_call
     async def on_key(self, event: events.Key) -> None:
         if event.key == "q":
             await self.action_quit()
         elif event.key in ("ctrl+q", "^Q", "^q") or (hasattr(event, "ctrl") and event.ctrl and event.key.lower() == "q"):
             self.exit()
 
+    @log_call
     async def action_quit(self):
         self.exit()
 
@@ -171,12 +182,14 @@ class MainMenuApp(App):
 class EditOptionsScreen(Screen):
     status: reactive[str] = reactive("")
 
+    @log_call
     async def on_list_view_selected(self, event: ListView.Selected) -> None:
         action = event.item.id
         handler = self.ACTION_HANDLERS.get(action)
         if handler:
             await handler(self)
 
+    @log_call
     async def handle_input_dir(self):
         def set_input_dir(val):
             if val is not None and val.strip():
@@ -186,6 +199,7 @@ class EditOptionsScreen(Screen):
                 self.update_status("Invalid input. Please try again.", "ERROR")
         await self.app.push_screen(InputDialog("Enter input directory:", cli_args['input_dir'], callback=set_input_dir))
 
+    @log_call
     async def handle_output_dir(self):
         def set_output_dir(val):
             prev = cli_args.get('output_dir') or ''
@@ -197,6 +211,7 @@ class EditOptionsScreen(Screen):
                 self.update_status("", "INFO")
         await self.app.push_screen(InputDialog("Enter output directory (blank for same as input):", cli_args['output_dir'] or "", callback=set_output_dir))
 
+    @log_call
     async def handle_qb_color(self):
         def set_qb_color(val):
             prev = cli_args.get('qb_color')
@@ -211,6 +226,7 @@ class EditOptionsScreen(Screen):
                     self.update_status("", "INFO")
         await self.app.push_screen(InputDialog("Quantization bits for color images (1-8, blank/off for full color):", str(cli_args['qb_color']) if cli_args['qb_color'] else "", callback=set_qb_color))
 
+    @log_call
     async def handle_qb_gray_color(self):
         def set_qb_gray_color(val):
             prev = cli_args.get('qb_gray_color')
@@ -225,6 +241,7 @@ class EditOptionsScreen(Screen):
                     self.update_status("", "INFO")
         await self.app.push_screen(InputDialog("Quantization bits for grayscale+one images (1-8, blank/off for full color):", str(cli_args['qb_gray_color']) if cli_args['qb_gray_color'] else "", callback=set_qb_gray_color))
 
+    @log_call
     async def handle_qb_gray(self):
         def set_qb_gray(val):
             prev = cli_args.get('qb_gray')
@@ -239,6 +256,7 @@ class EditOptionsScreen(Screen):
                     self.update_status("", "INFO")
         await self.app.push_screen(InputDialog("Quantization bits for grayscale images (1-8, blank/off for full color):", str(cli_args['qb_gray']) if cli_args['qb_gray'] else "", callback=set_qb_gray))
 
+    @log_call
     async def handle_method(self):
         def set_method(val):
             prev = cli_args.get('method')
@@ -253,6 +271,7 @@ class EditOptionsScreen(Screen):
                     self.update_status("", "INFO")
         await self.app.push_screen(InputDialog("Quantization method (0=Median Cut, 1=Max Coverage, 2=Fast Octree):", str(cli_args['method']), callback=set_method))
 
+    @log_call
     async def handle_dither(self):
         def set_dither(val):
             prev = cli_args.get('dither')
@@ -267,6 +286,7 @@ class EditOptionsScreen(Screen):
                     self.update_status("", "INFO")
         await self.app.push_screen(InputDialog("Dither (0=None, 1=Floyd-Steinberg):", str(cli_args['dither']), callback=set_dither))
 
+    @log_call
     async def handle_remove(self):
         def set_remove(val):
             prev = cli_args.get('remove')
@@ -277,6 +297,7 @@ class EditOptionsScreen(Screen):
                 self.update_status("", "INFO")
         await self.app.push_screen(YesNoDialog("Remove originals?", cli_args['remove'], callback=set_remove))
 
+    @log_call
     async def handle_recursive(self):
         def set_recursive(val):
             prev = cli_args.get('recursive')
@@ -287,6 +308,7 @@ class EditOptionsScreen(Screen):
                 self.update_status("", "INFO")
         await self.app.push_screen(YesNoDialog("Recursive search?", cli_args['recursive'], callback=set_recursive))
 
+    @log_call
     async def handle_silent(self):
         def set_silent(val):
             prev = cli_args.get('silent')
@@ -297,10 +319,10 @@ class EditOptionsScreen(Screen):
                 self.update_status("", "INFO")
         await self.app.push_screen(YesNoDialog("Silent mode?", cli_args['silent'], callback=set_silent))
 
+    @log_call
     async def handle_back(self):
         save_options("TUI", {k: v for k, v in cli_args.items() if k not in ("input_dir", "output_dir", "log", "version", "check_update")})
         self.app.pop_screen()
-        # Show status in main menu after returning
         main_app = self.app if hasattr(self, 'app') else None
         if main_app and hasattr(main_app, 'update_status'):
             main_app.update_status("Options saved!", "SUCCESS")
@@ -319,14 +341,14 @@ class EditOptionsScreen(Screen):
         "back": lambda self: self.handle_back(),
     }
 
+    @log_call
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Vertical(
-            Static("Edit Options", classes="title"),
-            ListView(id="edit_menu_list"),
-        )
+        yield Static("Edit Options", classes="title")
+        yield ListView(id="edit_menu_list")
         yield StatusFooter()
 
+    @log_call
     def refresh_options_list(self):
         def get_option_value(option_key):
             val = cli_args.get(option_key)
@@ -357,6 +379,7 @@ class EditOptionsScreen(Screen):
         list_view.clear()
         list_view.extend(options)
 
+    @log_call
     def update_status(self, msg: str, status_type: str = "INFO"):
         # Update the status message with the given status type.
         # Usage: self.update_status("Options saved!", "SUCCESS")
@@ -371,14 +394,16 @@ class EditOptionsScreen(Screen):
         self.refresh_options_list()
         self.refresh()
 
+    @log_call
     async def on_mount(self) -> None:
         self.query_one("#edit_menu_list").focus()
         self.update_status("")
         self.refresh_options_list()
 
+    @log_call
     async def on_key(self, event: events.Key) -> None:
         if event.key == "backspace":
-            self.app.pop_screen()
+            await self.handle_back()
         elif event.key in ("ctrl+q", "^Q", "^q") or (hasattr(event, "ctrl") and event.ctrl and event.key.lower() == "q"):
             self.app.exit()
 
@@ -390,6 +415,7 @@ class InputDialog(ModalScreen):
         self.initial = initial
         self.callback = callback
 
+    @log_call
     def compose(self) -> ComposeResult:
         yield Static(self.title, classes="title")
         yield Static(f"Current value: {self.initial if self.initial else '(default)'}", classes="current-value")
@@ -397,15 +423,18 @@ class InputDialog(ModalScreen):
         yield input_widget
         yield Static("[Enter] to confirm, [Esc] to cancel", classes="help")
 
+    @log_call
     async def on_mount(self) -> None:
         input_widget = self.query_one("#input_dialog_input", Input)
         input_widget.focus()
 
+    @log_call
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         if self.callback:
             self.callback(event.value)
         self.dismiss()
 
+    @log_call
     async def on_key(self, event: events.Key) -> None:
         if event.key == "escape":
             if self.callback:
@@ -421,6 +450,7 @@ class YesNoDialog(ModalScreen):
         self.value = initial
         self.callback = callback
 
+    @log_call
     def compose(self) -> ComposeResult:
         yield Static(self.title, classes="title")
         yield Static(f"Current value: {'Yes' if self.initial else 'No'}", classes="current-value")
@@ -431,10 +461,12 @@ class YesNoDialog(ModalScreen):
         )
         yield Static("[Enter] to select, [Esc] to cancel", classes="help")
 
+    @log_call
     async def on_mount(self) -> None:
         self.query_one("#yesno_menu").index = 0 if self.initial else 1
         self.query_one("#yesno_menu").focus()
 
+    @log_call
     async def on_list_view_selected(self, event: ListView.Selected) -> None:
         if event.item.id == "yes":
             self.value = True
@@ -447,6 +479,7 @@ class YesNoDialog(ModalScreen):
                 self.callback(self.value)
             self.dismiss()
 
+    @log_call
     async def on_key(self, event: events.Key) -> None:
         if event.key == "escape":
             if self.callback:
@@ -454,5 +487,6 @@ class YesNoDialog(ModalScreen):
             self.dismiss()
 
 
+@log_call
 def run():
     MainMenuApp().run()

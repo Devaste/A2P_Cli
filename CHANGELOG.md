@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
+## [2.0] - 2025-04-26
+### Major Changes
+- **Centralized Logging:** All logging is now handled via a robust, centralized logging configuration. Added a `log_call` decorator for function tracing and debugging.
+- **Cleaner Codebase:** Refactored both TUI and script/CLI modes for reduced cognitive complexity and maintainability. Removed all ad-hoc logging and print statements.
+- **Persistent Config:** CLI and TUI options can be saved/loaded from `options.ini` under `[CLI]` and `[TUI]` sections.
+- **MAN-Style Help:** CLI help output (`-h`/`--help`) now features a multi-line, MAN-style description with usage, all options, and real-world examples.
+- **Script Mode Refactor:** Script mode logic split into smaller, single-purpose functions, each with logging/tracing.
+- **Log File Management:** Log file (`a2pcli.log`) is now cleared on every app launch for clean session logs.
+- **README/Docs:** README and documentation updated to reflect new features, usage, and structure. Local persistent files are no longer shown in project structure.
+- **Version Bump:** Official release of version 2.0.
+
+### Added
+- Decorated all relevant functions with `@log_call` for automatic logging.
+- New CLI options: `--save`, `--options` for persistent config management.
+- MAN-style CLI help with usage, options, and examples.
+- Logging of all TUI and CLI actions, function calls, and errors.
+
+### Improved
+- Refactored script mode for clarity and maintainability.
+- TUI and CLI now share consistent logging and config logic.
+- Help and usage output are now much more user-friendly and discoverable.
+
+### Fixed
+- Status bar in TUI now always updates to “Options saved!” when returning from the options menu.
+- No more ad-hoc print/logging; all output is consistent and centralized.
+
 ## [1.5] - 2025-04-24
 ### Added
 - `--chk_bit`: Show real color count and approximate bit-depth for single files or all converted images.

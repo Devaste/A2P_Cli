@@ -6,7 +6,49 @@ import sys
 def parse_cli_args():
     if len(sys.argv) == 1:
         return None  # Signal: launch menu
-    parser = argparse.ArgumentParser(description="A2P_Cli: AVIF to PNG Converter")
+    parser = argparse.ArgumentParser(
+        description="""
+A2P_Cli - AVIF to PNG Converter
+
+Converts AVIF images to PNG, with advanced quantization and batch options.
+Supports both interactive TUI and script/CLI operation.
+
+USAGE:
+  a2pcli <input_dir> [--output_dir DIR] [OPTIONS...]
+  a2pcli --save [other options]
+  a2pcli <input_dir> --options
+  a2pcli single_file.avif --chk_bit
+  a2pcli --version
+  a2pcli --check-update
+
+COMMON OPTIONS:
+  input_dir               Directory or file to convert (required unless --version or --check-update)
+  --output_dir DIR        Directory to save .png files (default: same as input)
+  --remove                Remove original .avif files after conversion
+  --recursive             Recursively search for .avif files in subdirectories
+  --silent                No output to command line, only finishing result
+  --qb_color N            Quantization bits for color images (1–8)
+  --qb_gray_color N       Quantization bits for grayscale+one images (1–8)
+  --qb_gray N             Quantization bits for grayscale images (1–8)
+  --method N              Quantization method: 0=Median Cut, 1=Max Coverage, 2=Fast Octree
+  --dither N              Dither: 0=None, 1=Floyd-Steinberg
+  --log N                 Set logging level: 0=off, 1=error, 2=warning, 3=info, 4=debug
+  --chk_bit               Check and display real bit depth (unique color count) for each converted image or single file
+  --save                  Save current CLI options to the [CLI] block in options.ini and exit
+  --options               Load CLI options from the [CLI] block in options.ini (overrides other CLI args except input_dir)
+  --version               Show version and exit
+  --check-update          Check for updates and exit
+
+EXAMPLES:
+  a2pcli images/ --qb_color 4 --method 1 --dither 1
+  a2pcli images/example.avif --chk_bit
+  a2pcli --save --qb_color 8 --recursive
+  a2pcli images2/ --options
+
+Options can also be saved/loaded in options.ini ([CLI] section).
+For TUI mode, run without arguments.
+        """
+    )
     parser.add_argument("input_dir", type=str, nargs="?", help="Directory or file to convert (required unless --version or --check-update)")
     parser.add_argument("--output_dir", type=str, default=None, help="Directory to save .png files (default: same as input)")
     parser.add_argument("--remove", action="store_true", help="Remove original .avif files after conversion")

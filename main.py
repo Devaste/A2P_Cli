@@ -1,3 +1,14 @@
+# Clear log file at app launch
+with open("a2pcli.log", "w"): pass
+
+import logging
+logging.basicConfig(
+    filename="a2pcli.log",
+    filemode="a",
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)s %(message)s"
+)
+
 import sys
 
 from cli.tui_mode import run as main_menu_run
