@@ -5,7 +5,7 @@ from textual.reactive import reactive
 from textual import events
 from textual.screen import Screen, ModalScreen
 from rich.text import Text
-from logic.update_check import check_for_update
+from logic.update_check import get_local_version, get_latest_version, download_and_prepare_update
 from logic.convert import convert_avif_to_png
 from logic.logging_config import log_call
 from cli.globals import options_dict
@@ -176,8 +176,35 @@ class MainMenuApp(App):
         elif action == "edit":
             await self.push_screen(EditOptionsScreen())
         elif action == "update":
-            check_for_update()
-            self.update_status("Checked for updates.", "INFO")
+            # Enhanced TUI update logic
+            try:
+                local = get_local_version()
+                latest = get_latest_version()
+                if not local or not latest:
+                    self.update_status("Could not check for updates.", "ERROR")
+                    return
+                if latest == local:
+                    self.update_status(f"You are running the latest version: {local}.", "SUCCESS")
+                    return
+                # Prompt user with YesNoDialog
+                class UpdatePrompt(ModalScreen):
+                    def compose(self) -> ComposeResult:
+                        yield Static(f"Update available: {latest} (You have {local})\nUpdate now?", id="update_prompt")
+                        yield ListView(
+                            ListItem(Static("Yes"), id="yes"),
+                            ListItem(Static("No"), id="no"),
+                            id="update_prompt_list")
+                    async def on_list_view_selected(self, event):
+                        if event.item.id == "yes":
+                            self.app.pop_screen()
+                            self.app.update_status("Updating...", "INFO")
+                            threading.Thread(target=download_and_prepare_update, daemon=True).start()
+                        else:
+                            self.app.pop_screen()
+                            self.app.update_status("Update skipped.", "INFO")
+                await self.push_screen(UpdatePrompt())
+            except Exception as e:
+                self.update_status(f"Update check failed: {e}", "ERROR")
         elif action == "quit":
             await self.action_quit()
 

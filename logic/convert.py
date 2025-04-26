@@ -27,7 +27,7 @@ def is_greyscale(img):
 
 @log_call
 def get_real_bit_count(img):
-    """Return the number of unique colors (palette or RGB), and bit count."""
+    """Return the number of unique colors (palette or RGB), and "bit" count."""
     if img.mode == "P":
         colors = img.getcolors(maxcolors=256)
         n_colors = len(colors) if colors else 0

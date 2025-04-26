@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
+## [2.1.0] - 2025-04-27
+### Added
+- Robust self-updating mechanism for all deployment types (Windows EXE, Unix binary, Python script).
+- Platform-aware asset selection and extraction during update.
+- CLI: Prompts for update unless --silent is set (auto-updates in silent mode).
+- TUI: Interactive prompt for update if a new version is available.
+
+### Improved
+- Centralized and simplified update logic for maintainability and reliability.
+- README updated to document update feature and usage.
+
+### Fixed
+- Ensured all update-related user interactions are consistent and user-friendly in both CLI and TUI modes.
+
 ## [2.0] - 2025-04-26
 ### Major Changes
 - **Centralized Logging:** All logging is now handled via a robust, centralized logging configuration. Added a `log_call` decorator for function tracing and debugging.

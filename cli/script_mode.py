@@ -33,14 +33,25 @@ def handle_version_check(args):
 @log_call
 def handle_update_check(args):
     if args.get('check_update', False):
-        from logic.update_check import get_local_version, get_latest_version
+        from logic.update_check import get_local_version, get_latest_version, download_and_prepare_update
         local = get_local_version()
         latest = get_latest_version()
         if latest == local:
             print(f"You are running the latest version: {local}.")
+            sys.exit(0)
         else:
             print(f"Update available: {latest} (You have {local})")
-        sys.exit(0)
+            if args.get('silent', False):
+                print("[Update] Running in silent mode: updating without prompt...")
+                download_and_prepare_update()
+                sys.exit(0)
+            else:
+                resp = input("Would you like to update now? [Y/n]: ").strip().lower()
+                if resp in ('', 'y', 'yes'):
+                    download_and_prepare_update()
+                else:
+                    print("Update skipped.")
+                sys.exit(0)
 
 @log_call
 def handle_bit_check(args):

@@ -1,6 +1,6 @@
 # A2P_Cli - AVIF to PNG Converter
 
-**Version 2.0 (stable, 2025)**
+**Version 2.1.0 (pre-release, 2025)**
 
 A modular, robust tool for converting AVIF images to PNG with advanced quantization, dithering, and both interactive TUI and scriptable CLI modes. Features centralized logging, persistent config, and a clean, maintainable codebase.
 
@@ -14,6 +14,7 @@ A modular, robust tool for converting AVIF images to PNG with advanced quantizat
 - **Batch and recursive conversion**
 - **Real bit-depth check**: `--chk_bit` shows color/bit info for any image
 - **MAN-style help**: `-h`/`--help` shows usage, options, and examples
+- **Self-updating**: Robust update mechanism for all deployment types (Windows EXE, Unix binary, Python script) with platform-aware asset selection, extraction, and relaunch. CLI prompts for update unless --silent is set (auto-updates); TUI prompts interactively.
 
 ## Project Structure
 ```
@@ -48,7 +49,7 @@ You can use `python main.py`, `a2pcli`, or `a2pcli.exe` interchangeably for all 
   python main.py <input_dir> --qb_color 4 --method 1 --dither 1
   python main.py <input_dir> --options
   python main.py --version
-  python main.py --check-update
+  python main.py --check-update   # Now supports in-app update with prompt/auto-update
   ```
 
 ## CLI Options
