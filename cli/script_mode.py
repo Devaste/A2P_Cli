@@ -1,5 +1,5 @@
-from cli.args import parse_cli_args
 from cli.options_io import load_options, save_options
+from cli.args import parse_cli_args
 from logic.convert import convert_avif_to_png, get_real_bit_count
 from pathlib import Path
 from PIL import Image
@@ -78,13 +78,26 @@ def run_conversion(args):
 
 @log_call
 def run():
-    args = parse_cli_args()
-    if args is None:
-        print("[Error] No CLI arguments provided.")
-        sys.exit(1)
-    args = handle_options_logic(args)
-    handle_save_logic(args)
-    handle_version_check(args)
-    handle_update_check(args)
-    handle_bit_check(args)
-    run_conversion(args)
+    mode, args = parse_cli_args()
+    if mode == 'meta':
+        if args.get('version'):
+            from logic.update_check import get_local_version
+            print(f"A2P_Cli version: {get_local_version()}")
+        elif args.get('check_update'):
+            from logic.update_check import get_local_version, get_latest_version
+            local = get_local_version()
+            latest = get_latest_version()
+            if latest == local:
+                print(f"You are running the latest version: {local}.")
+            else:
+                print(f"Update available: {latest} (You have {local})")
+        return
+    if mode == 'functional':
+        # Functional logic (save/options) can be handled here if needed
+        pass  # Extend as needed
+    if mode == 'conversion':
+        # Proceed with conversion logic
+        args = handle_options_logic(args)
+        handle_save_logic(args)
+        handle_bit_check(args)
+        run_conversion(args)

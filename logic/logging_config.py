@@ -4,6 +4,26 @@ import inspect
 import threading
 import os
 
+ASYNC_LOG_PREFIX = '[async] '
+
+def _log_entry(func, cls, args, kwargs, caller, is_async=False):
+    prefix = ASYNC_LOG_PREFIX if is_async else ''
+    logging.debug(
+        f"{prefix}Entering {func.__qualname__} (class={cls}) "
+        f"args={args} kwargs={kwargs} "
+        f"called_from={caller.function}:{caller.lineno} "
+        f"thread={threading.current_thread().name} pid={os.getpid()}"
+    )
+
+def _log_exit(func, result, is_async=False):
+    prefix = ASYNC_LOG_PREFIX if is_async else ''
+    logging.debug(f"{prefix}Exiting {func.__qualname__} result={result}")
+
+def _log_exception(func, e, is_async=False):
+    prefix = ASYNC_LOG_PREFIX if is_async else ''
+    logging.error(f"{prefix}Exception in {func.__qualname__}: {e}", exc_info=True)
+
+
 def log_call(func):
     """
     Enhanced decorator to log function entry, exit, arguments, class, caller, thread, and process info.
@@ -14,18 +34,13 @@ def log_call(func):
         async def async_wrapper(*args, **kwargs):
             cls = args[0].__class__.__name__ if args and hasattr(args[0], '__class__') else None
             caller = inspect.stack()[1]
-            logging.debug(
-                f"[async] Entering {func.__qualname__} (class={cls}) "
-                f"args={args} kwargs={kwargs} "
-                f"called_from={caller.function}:{caller.lineno} "
-                f"thread={threading.current_thread().name} pid={os.getpid()}"
-            )
+            _log_entry(func, cls, args, kwargs, caller, is_async=True)
             try:
                 result = await func(*args, **kwargs)
-                logging.debug(f"[async] Exiting {func.__qualname__} result={result}")
+                _log_exit(func, result, is_async=True)
                 return result
             except Exception as e:
-                logging.error(f"[async] Exception in {func.__qualname__}: {e}", exc_info=True)
+                _log_exception(func, e, is_async=True)
                 raise
         return async_wrapper
     else:
@@ -33,17 +48,12 @@ def log_call(func):
         def sync_wrapper(*args, **kwargs):
             cls = args[0].__class__.__name__ if args and hasattr(args[0], '__class__') else None
             caller = inspect.stack()[1]
-            logging.debug(
-                f"Entering {func.__qualname__} (class={cls}) "
-                f"args={args} kwargs={kwargs} "
-                f"called_from={caller.function}:{caller.lineno} "
-                f"thread={threading.current_thread().name} pid={os.getpid()}"
-            )
+            _log_entry(func, cls, args, kwargs, caller)
             try:
                 result = func(*args, **kwargs)
-                logging.debug(f"Exiting {func.__qualname__} result={result}")
+                _log_exit(func, result)
                 return result
             except Exception as e:
-                logging.error(f"Exception in {func.__qualname__}: {e}", exc_info=True)
+                _log_exception(func, e)
                 raise
         return sync_wrapper

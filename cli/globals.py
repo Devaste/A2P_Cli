@@ -1,11 +1,11 @@
 # Global arguments/constants for CLI and TUI usage
 
-# Quantization defaults for CLI and TUI (single source of truth)
-DEFAULT_QB_COLOR = 0  # 0 means no quantization (full color)
-DEFAULT_QB_GRAY_COLOR = 8  # 256 levels (was 4)
-DEFAULT_QB_GRAY = 4        # 16 levels
+# Quantization bits defaults: None means 'off' (full color), 1-8 are valid
+DEFAULT_QB_COLOR = None  # None means no quantization (full color)
+DEFAULT_QB_GRAY_COLOR = None
+DEFAULT_QB_GRAY = None
 
-cli_args = {
+options_dict = {
     "input_dir": "",
     "output_dir": "",
     "remove": False,
@@ -18,9 +18,4 @@ cli_args = {
     "dither": 0,  # default dither is 0
 }
 
-# Status bar color constants
-STATUS_COLORS = {
-    "INFO": "yellow",
-    "SUCCESS": "green",
-    "ERROR": "red",
-}
+# Status bar color constants (moved to tui_mode.py)

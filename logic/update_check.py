@@ -7,7 +7,8 @@ RELEASES_URL = "https://github.com/Devaste/A2P_Cli/releases/latest"
 
 def resource_path(relative_path):
     # Handles PyInstaller's _MEIPASS for bundled data files
-    if hasattr(sys, '_MEIPASS'):
+    # PyInstaller sets _MEIPASS for bundled data files. Access is required and documented by PyInstaller (safe to ignore protected member warning).
+    if hasattr(sys, '_MEIPASS'):  # noqa: SLF001
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.dirname(__file__), '..', relative_path)
 

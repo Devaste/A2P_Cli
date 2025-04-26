@@ -8,15 +8,24 @@ from rich.text import Text
 from logic.update_check import check_for_update
 from logic.convert import convert_avif_to_png
 from logic.logging_config import log_call
-from cli.globals import cli_args, STATUS_COLORS
+from cli.globals import options_dict
 from cli.options_io import save_options, load_options
 import threading
+from pathlib import Path
+
+STATUS_COLORS = {
+    "INFO": "yellow",
+    "SUCCESS": "green",
+    "ERROR": "red",
+}
+
 CANCELED_MSG = "Canceled."
 INVALID_QB_MSG = "Invalid: must be 1-8 or blank for full color."
+NO_CHANGE_MSG = "No change."
 
 @log_call
 def quant_bits_display_dynamic(val, label):
-    if val in (0, None):
+    if val is None:
         return f"Quantization bits ({label}): off (full color)"
     else:
         return f"Quantization bits ({label}): {val} ({2**val} levels)"
@@ -29,9 +38,9 @@ def get_edit_menu_options(args):
         ("Remove originals?", "remove"),
         ("Recursive search?", "recursive"),
         ("Silent mode?", "silent"),
-        (quant_bits_display_dynamic(args.get("qb_color", 0), "color"), "qb_color"),
-        (quant_bits_display_dynamic(args.get("qb_gray_color", 0), "grayscale+one"), "qb_gray_color"),
-        (quant_bits_display_dynamic(args.get("qb_gray", 0), "grayscale"), "qb_gray"),
+        (quant_bits_display_dynamic(args.get("qb_color", None), "color"), "qb_color"),
+        (quant_bits_display_dynamic(args.get("qb_gray_color", None), "grayscale+one"), "qb_gray_color"),
+        (quant_bits_display_dynamic(args.get("qb_gray", None), "grayscale"), "qb_gray"),
         ("Quantization method", "method"),
         ("Dither", "dither"),
         ("Back to main menu", "back"),
@@ -45,16 +54,16 @@ MENU_OPTIONS = [
 ]
 
 # Helper to map arg name to menu display name
-MENU_ARG_TO_DISPLAY = {arg: display for display, arg in get_edit_menu_options(cli_args)}
+menu_arg_to_display = {arg: display for display, arg in get_edit_menu_options(options_dict)}
 
 OPTION_VALIDATORS = {
     "output_dir": lambda v: v.strip() or None,
     "remove": lambda v: v.lower() == 'y' if isinstance(v, str) else bool(v),
     "recursive": lambda v: v.lower() == 'y' if isinstance(v, str) else bool(v),
     "silent": lambda v: v.lower() == 'y' if isinstance(v, str) else bool(v),
-    "qb_color": lambda v: int(v) if v else None,
-    "qb_gray_color": lambda v: int(v) if v else None,
-    "qb_gray": lambda v: int(v) if v else None,
+    "qb_color": lambda v: int(v) if v and v.strip() else None,
+    "qb_gray_color": lambda v: int(v) if v and v.strip() else None,
+    "qb_gray": lambda v: int(v) if v and v.strip() else None,
     "method": lambda v: int(v),
     "dither": lambda v: int(v),
 }
@@ -90,6 +99,10 @@ class StatusFooter(Footer):
 
 
 class MainMenuApp(App):
+    """
+    Main TUI application class for A2P_Cli.
+    Displays the main menu and manages navigation between screens.
+    """
     TITLE = "A2P_Cli - AVIF to PNG Converter"
     CSS_PATH = None
     status: reactive[str] = reactive("")
@@ -130,8 +143,8 @@ class MainMenuApp(App):
     async def on_list_view_selected(self, event: ListView.Selected) -> None:
         action = event.item.id
         if action == "start":
-            if not cli_args['input_dir'] or not str(cli_args['input_dir']).strip():
-                self.update_status(f"{MENU_ARG_TO_DISPLAY['input_dir']} is required. Please set it in 'Edit Options' before starting conversion.", "ERROR")
+            if not options_dict['input_dir'] or not str(options_dict['input_dir']).strip():
+                self.update_status(f"{menu_arg_to_display['input_dir']} is required. Please set it in 'Edit Options' before starting conversion.", "ERROR")
                 return
             self.progress = 0
             self.progress_total = 1
@@ -142,16 +155,16 @@ class MainMenuApp(App):
                 self.progress_total = total
             def run_conversion():
                 try:
-                    filtered_kwargs = {k: v for k, v in cli_args.items() if k not in ['input_dir', 'output_dir', 'remove', 'recursive', 'silent', 'qb_color', 'qb_gray_color', 'qb_gray', 'log_level']}
+                    filtered_kwargs = {k: v for k, v in options_dict.items() if k not in ['input_dir', 'output_dir', 'remove', 'recursive', 'silent', 'qb_color', 'qb_gray_color', 'qb_gray', 'log_level']}
                     convert_avif_to_png(
-                        cli_args['input_dir'],
-                        cli_args['output_dir'],
-                        remove=cli_args['remove'],
-                        recursive=cli_args['recursive'],
-                        silent=cli_args['silent'],
-                        qb_color=cli_args['qb_color'],
-                        qb_gray_color=cli_args['qb_gray_color'],
-                        qb_gray=cli_args['qb_gray'],
+                        options_dict['input_dir'],
+                        options_dict['output_dir'],
+                        remove=options_dict['remove'],
+                        recursive=options_dict['recursive'],
+                        silent=options_dict['silent'],
+                        qb_color=options_dict['qb_color'],
+                        qb_gray_color=options_dict['qb_gray_color'],
+                        qb_gray=options_dict['qb_gray'],
                         progress_callback=progress_callback,
                         progress_printer=None,
                         **filtered_kwargs
@@ -181,6 +194,10 @@ class MainMenuApp(App):
 
 
 class EditOptionsScreen(Screen):
+    """
+    TUI screen for editing conversion options in A2P_Cli.
+    Allows users to modify input/output directories, quantization, and other settings interactively.
+    """
     status: reactive[str] = reactive("")
 
     @log_call
@@ -194,153 +211,165 @@ class EditOptionsScreen(Screen):
     async def handle_input_dir(self):
         def set_input_dir(val):
             if val is not None and val.strip():
-                cli_args['input_dir'] = val.strip()
-                self.update_status(f"{MENU_ARG_TO_DISPLAY['input_dir']} set to: {cli_args['input_dir']}", "INFO")
+                path = Path(val.strip())
+                if path.is_dir():
+                    options_dict['input_dir'] = str(path)
+                    self.update_status(f"Input directory set to: {options_dict['input_dir']}", "INFO")
+                else:
+                    self.update_status("Input directory must exist and be a directory.", "ERROR")
             elif val is not None:
                 self.update_status("Invalid input. Please try again.", "ERROR")
-        await self.app.push_screen(InputDialog("Enter input directory:", cli_args['input_dir'], callback=set_input_dir))
+        await self.app.push_screen(InputDialog("Enter input directory (must exist):", options_dict['input_dir'], callback=set_input_dir))
 
     @log_call
     async def handle_output_dir(self):
         def set_output_dir(val):
-            prev = cli_args.get('output_dir') or ''
-            new_val = val.strip() if val and val.strip() else None
-            if new_val != prev:
-                cli_args['output_dir'] = new_val
-                self.update_status(f"{MENU_ARG_TO_DISPLAY['output_dir']} set to: {cli_args['output_dir']}", "INFO")
-            else:
-                self.update_status("", "INFO")
-        await self.app.push_screen(InputDialog("Enter output directory (blank for same as input):", cli_args['output_dir'] or "", callback=set_output_dir))
+            if val is not None and val.strip():
+                path = Path(val.strip())
+                # Accept any syntactically valid path for output dir
+                try:
+                    str(path)  # This will always succeed unless path is invalid type
+                    options_dict['output_dir'] = str(path)
+                    self.update_status(f"Output directory set to: {options_dict['output_dir']}", "INFO")
+                except Exception:
+                    self.update_status("Invalid directory path. Please enter a valid full or relative path.", "ERROR")
+            elif val is not None:
+                options_dict['output_dir'] = None
+                self.update_status("Output directory cleared (will use input dir)", "INFO")
+        await self.app.push_screen(InputDialog("Enter output directory (full or relative path, blank for same as input):", options_dict['output_dir'] or "", callback=set_output_dir))
 
     @log_call
     async def handle_qb_color(self):
         def set_qb_color(val):
-            prev = cli_args.get('qb_color')
-            if val is None:
-                self.update_status(CANCELED_MSG, "INFO")
-            elif not val.strip():
-                cli_args['qb_color'] = None
+            prev = options_dict.get('qb_color')
+            if val is None or not val.strip():
+                options_dict['qb_color'] = None
                 self.update_status("Color quantization off (full color)", "INFO")
-            else:
+                return
+            try:
                 new_val = int(val)
                 if 1 <= new_val <= 8:
                     if new_val != prev:
-                        cli_args['qb_color'] = new_val
-                        self.update_status(quant_bits_display_dynamic(new_val, "color"), "INFO")
+                        options_dict['qb_color'] = new_val
+                        self.update_status(f"Quantization bits for color images set to: {options_dict['qb_color']}", "INFO")
                     else:
-                        self.update_status("", "INFO")
+                        self.update_status(NO_CHANGE_MSG, "INFO")
                 else:
                     self.update_status(INVALID_QB_MSG, "ERROR")
-        await self.app.push_screen(InputDialog("Quantization bits for color images (1-8, blank/off for full color):", str(cli_args['qb_color']) if cli_args['qb_color'] else "", callback=set_qb_color))
+            except Exception:
+                self.update_status(INVALID_QB_MSG, "ERROR")
+        await self.app.push_screen(InputDialog("Quantization bits for color images (1-8, blank/off for full color):", str(options_dict['qb_color']) if options_dict['qb_color'] else "", callback=set_qb_color))
 
     @log_call
     async def handle_qb_gray_color(self):
         def set_qb_gray_color(val):
-            prev = cli_args.get('qb_gray_color')
-            if val is None:
-                self.update_status(CANCELED_MSG, "INFO")
-            elif not val.strip():
-                cli_args['qb_gray_color'] = None
+            prev = options_dict.get('qb_gray_color')
+            if val is None or not val.strip():
+                options_dict['qb_gray_color'] = None
                 self.update_status("Grayscale+one quantization off (full color)", "INFO")
-            else:
+                return
+            try:
                 new_val = int(val)
                 if 1 <= new_val <= 8:
                     if new_val != prev:
-                        cli_args['qb_gray_color'] = new_val
-                        self.update_status(quant_bits_display_dynamic(new_val, "grayscale+one"), "INFO")
+                        options_dict['qb_gray_color'] = new_val
+                        self.update_status(f"Quantization bits for grayscale+one images set to: {options_dict['qb_gray_color']}", "INFO")
                     else:
-                        self.update_status("", "INFO")
+                        self.update_status(NO_CHANGE_MSG, "INFO")
                 else:
                     self.update_status(INVALID_QB_MSG, "ERROR")
-        await self.app.push_screen(InputDialog("Quantization bits for grayscale+one images (1-8, blank/off for full color):", str(cli_args['qb_gray_color']) if cli_args['qb_gray_color'] else "", callback=set_qb_gray_color))
+            except Exception:
+                self.update_status(INVALID_QB_MSG, "ERROR")
+        await self.app.push_screen(InputDialog("Quantization bits for grayscale+one images (1-8, blank/off for full color):", str(options_dict['qb_gray_color']) if options_dict['qb_gray_color'] else "", callback=set_qb_gray_color))
 
     @log_call
     async def handle_qb_gray(self):
         def set_qb_gray(val):
-            prev = cli_args.get('qb_gray')
-            if val is None:
-                self.update_status(CANCELED_MSG, "INFO")
-            elif not val.strip():
-                cli_args['qb_gray'] = None
+            prev = options_dict.get('qb_gray')
+            if val is None or not val.strip():
+                options_dict['qb_gray'] = None
                 self.update_status("Grayscale quantization off (full color)", "INFO")
-            else:
+                return
+            try:
                 new_val = int(val)
                 if 1 <= new_val <= 8:
                     if new_val != prev:
-                        cli_args['qb_gray'] = new_val
-                        self.update_status(quant_bits_display_dynamic(new_val, "grayscale"), "INFO")
+                        options_dict['qb_gray'] = new_val
+                        self.update_status(f"Quantization bits for grayscale images set to: {options_dict['qb_gray']}", "INFO")
                     else:
-                        self.update_status("", "INFO")
+                        self.update_status(NO_CHANGE_MSG, "INFO")
                 else:
                     self.update_status(INVALID_QB_MSG, "ERROR")
-        await self.app.push_screen(InputDialog("Quantization bits for grayscale images (1-8, blank/off for full color):", str(cli_args['qb_gray']) if cli_args['qb_gray'] else "", callback=set_qb_gray))
+            except Exception:
+                self.update_status(INVALID_QB_MSG, "ERROR")
+        await self.app.push_screen(InputDialog("Quantization bits for grayscale images (1-8, blank/off for full color):", str(options_dict['qb_gray']) if options_dict['qb_gray'] else "", callback=set_qb_gray))
 
     @log_call
     async def handle_method(self):
         def set_method(val):
-            prev = cli_args.get('method')
+            prev = options_dict.get('method')
             if val is None:
                 self.update_status(CANCELED_MSG, "INFO")
             else:
                 new_val = int(val)
                 if new_val != prev:
-                    cli_args['method'] = new_val
-                    self.update_status(f"{MENU_ARG_TO_DISPLAY['method']} set to: {cli_args['method']}", "INFO")
+                    options_dict['method'] = new_val
+                    self.update_status(f"{menu_arg_to_display['method']} set to: {options_dict['method']}", "INFO")
                 else:
-                    self.update_status("", "INFO")
-        await self.app.push_screen(InputDialog("Quantization method (0=Median Cut, 1=Max Coverage, 2=Fast Octree):", str(cli_args['method']), callback=set_method))
+                    self.update_status(NO_CHANGE_MSG, "INFO")
+        await self.app.push_screen(InputDialog("Quantization method (0=Median Cut, 1=Max Coverage, 2=Fast Octree):", str(options_dict['method']), callback=set_method))
 
     @log_call
     async def handle_dither(self):
         def set_dither(val):
-            prev = cli_args.get('dither')
+            prev = options_dict.get('dither')
             if val is None:
                 self.update_status(CANCELED_MSG, "INFO")
             else:
                 new_val = int(val)
                 if new_val != prev:
-                    cli_args['dither'] = new_val
-                    self.update_status(f"{MENU_ARG_TO_DISPLAY['dither']} set to: {cli_args['dither']}", "INFO")
+                    options_dict['dither'] = new_val
+                    self.update_status(f"{menu_arg_to_display['dither']} set to: {options_dict['dither']}", "INFO")
                 else:
-                    self.update_status("", "INFO")
-        await self.app.push_screen(InputDialog("Dither (0=None, 1=Floyd-Steinberg):", str(cli_args['dither']), callback=set_dither))
+                    self.update_status(NO_CHANGE_MSG, "INFO")
+        await self.app.push_screen(InputDialog("Dither (0=None, 1=Floyd-Steinberg):", str(options_dict['dither']), callback=set_dither))
 
     @log_call
     async def handle_remove(self):
         def set_remove(val):
-            prev = cli_args.get('remove')
+            prev = options_dict.get('remove')
             if val != prev:
-                cli_args['remove'] = val
-                self.update_status(f"{MENU_ARG_TO_DISPLAY['remove']} set to: {cli_args['remove']}", "INFO")
+                options_dict['remove'] = val
+                self.update_status(f"{menu_arg_to_display['remove']} set to: {options_dict['remove']}", "INFO")
             else:
-                self.update_status("", "INFO")
-        await self.app.push_screen(YesNoDialog("Remove originals?", cli_args['remove'], callback=set_remove))
+                self.update_status(NO_CHANGE_MSG, "INFO")
+        await self.app.push_screen(YesNoDialog("Remove originals?", options_dict['remove'], callback=set_remove))
 
     @log_call
     async def handle_recursive(self):
         def set_recursive(val):
-            prev = cli_args.get('recursive')
+            prev = options_dict.get('recursive')
             if val != prev:
-                cli_args['recursive'] = val
-                self.update_status(f"{MENU_ARG_TO_DISPLAY['recursive']} set to: {cli_args['recursive']}", "INFO")
+                options_dict['recursive'] = val
+                self.update_status(f"{menu_arg_to_display['recursive']} set to: {options_dict['recursive']}", "INFO")
             else:
-                self.update_status("", "INFO")
-        await self.app.push_screen(YesNoDialog("Recursive search?", cli_args['recursive'], callback=set_recursive))
+                self.update_status(NO_CHANGE_MSG, "INFO")
+        await self.app.push_screen(YesNoDialog("Recursive search?", options_dict['recursive'], callback=set_recursive))
 
     @log_call
     async def handle_silent(self):
         def set_silent(val):
-            prev = cli_args.get('silent')
+            prev = options_dict.get('silent')
             if val != prev:
-                cli_args['silent'] = val
-                self.update_status(f"{MENU_ARG_TO_DISPLAY['silent']} set to: {cli_args['silent']}", "INFO")
+                options_dict['silent'] = val
+                self.update_status(f"{menu_arg_to_display['silent']} set to: {options_dict['silent']}", "INFO")
             else:
-                self.update_status("", "INFO")
-        await self.app.push_screen(YesNoDialog("Silent mode?", cli_args['silent'], callback=set_silent))
+                self.update_status(NO_CHANGE_MSG, "INFO")
+        await self.app.push_screen(YesNoDialog("Silent mode?", options_dict['silent'], callback=set_silent))
 
     @log_call
     async def handle_back(self):
-        save_options("TUI", {k: v for k, v in cli_args.items() if k not in ("input_dir", "output_dir", "log", "version", "check_update")})
+        save_options("TUI", {k: v for k, v in options_dict.items() if k not in ("input_dir", "output_dir", "log", "version", "check_update")})
         self.app.pop_screen()
         main_app = self.app if hasattr(self, 'app') else None
         if main_app and hasattr(main_app, 'update_status'):
@@ -368,32 +397,38 @@ class EditOptionsScreen(Screen):
         yield StatusFooter()
 
     @log_call
-    def refresh_options_list(self):
-        def get_option_value(option_key):
-            val = cli_args.get(option_key)
-            if option_key in ("remove", "recursive", "silent"):
-                return "Yes" if val else "No"
-            elif option_key == "output_dir":
-                # Show empty string if both output_dir and input_dir are blank/None
-                if not val:
-                    input_dir_val = cli_args.get("input_dir", "")
-                    if not input_dir_val:
-                        return ""
-                    return input_dir_val
-                return str(val)
-            elif val is None:
-                return "(default)"
+    def get_option_value(self, option_key, all_options_dict):
+        val = all_options_dict.get(option_key)
+        if option_key in ("remove", "recursive", "silent"):
+            return "Yes" if val else "No"
+        if option_key == "output_dir":
+            if not val:
+                input_dir_val = all_options_dict.get("input_dir", "")
+                if not input_dir_val:
+                    return ""
+                return input_dir_val
             return str(val)
+        if val is None:
+            return "(default)"
+        return str(val)
+
+    @log_call
+    def build_option_list(self, all_options_dict, menu_display_map):
         options = []
-        for label, action in get_edit_menu_options(cli_args):
+        for label, action in get_edit_menu_options(all_options_dict):
             if 'Quantization bits' in label:
                 display_label = label
-                MENU_ARG_TO_DISPLAY[action] = label
+                menu_display_map[action] = label
             elif action == 'back':
                 display_label = label
             else:
-                display_label = f"{label} [{get_option_value(action)}]"
+                display_label = f"{label} [{self.get_option_value(action, all_options_dict)}]"
             options.append(ListItem(Static(display_label, classes="option-item"), id=action))
+        return options
+
+    @log_call
+    def refresh_options_list(self):
+        options = self.build_option_list(options_dict, menu_arg_to_display)
         list_view = self.query_one("#edit_menu_list", ListView)
         list_view.clear()
         list_view.extend(options)
@@ -428,6 +463,10 @@ class EditOptionsScreen(Screen):
 
 
 class InputDialog(ModalScreen):
+    """
+    Modal dialog screen for text input in the TUI.
+    Used for entering or editing configuration values interactively.
+    """
     def __init__(self, title: str, initial: str = "", callback=None):
         super().__init__()
         self.title = title
@@ -462,6 +501,10 @@ class InputDialog(ModalScreen):
 
 
 class YesNoDialog(ModalScreen):
+    """
+    Modal dialog screen for yes/no (boolean) input in the TUI.
+    Used for toggling boolean configuration values interactively.
+    """
     def __init__(self, title: str, initial: bool = False, callback=None):
         super().__init__()
         self.title = title
@@ -509,6 +552,6 @@ class YesNoDialog(ModalScreen):
 @log_call
 def run():
     # Load [TUI] options from options.ini at startup
-    from cli.globals import cli_args
-    cli_args.update(load_options('TUI'))
+    from cli.globals import options_dict
+    options_dict.update(load_options('TUI'))
     MainMenuApp().run()

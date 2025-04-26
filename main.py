@@ -1,5 +1,6 @@
 # Clear log file at app launch
-with open("a2pcli.log", "w"): pass
+with open("a2pcli.log", "w") as f:
+    f.write("")
 
 import logging
 logging.basicConfig(
@@ -11,13 +12,16 @@ logging.basicConfig(
 
 import sys
 
-from cli.tui_mode import run as main_menu_run
-from cli.script_mode import run as script_mode_run
-
 def main():
+    """
+    Entry point for A2P_Cli.
+    Runs TUI if no arguments are given, otherwise runs CLI/script mode.
+    """
     if len(sys.argv) == 1:
+        from cli.tui_mode import run as main_menu_run
         main_menu_run()
     else:
+        from cli.script_mode import run as script_mode_run
         script_mode_run()
 
 if __name__ == "__main__":

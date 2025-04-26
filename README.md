@@ -32,41 +32,82 @@ A2P_Cli/
 ...
 ```
 
+**Note:** Anywhere you see `python main.py`, you can also use `a2pcli` or `a2pcli.exe` if installed globally or on Windows. All CLI commands and options are identical.
+
 ## How to Run
-- **TUI mode:**
+
+You can use `python main.py`, `a2pcli`, or `a2pcli.exe` interchangeably for all commands below. For clarity, all examples below use `python main.py`—simply substitute your preferred command as needed.
+
+- **TUI mode (interactive menu):**
   ```sh
   python main.py
-  # or
-  a2pcli
   ```
-- **CLI/script mode:**
+- **CLI/script mode (batch conversion, automation):**
   ```sh
   python main.py <input_dir> [OPTIONS...]
-  a2pcli <input_dir> --qb_color 4 --method 1 --dither 1
-  a2pcli <input_dir> --options
-  a2pcli --version
-  a2pcli --check-update
+  python main.py <input_dir> --qb_color 4 --method 1 --dither 1
+  python main.py <input_dir> --options
+  python main.py --version
+  python main.py --check-update
   ```
 
 ## CLI Options
+
+All CLI options are summarized below. For a full, up-to-date usage guide and examples, see the [Usage & Help](#usage--help) section.
+
 - **input_dir**: Directory or file to convert (required unless --version or --check-update)
 - **--output_dir DIR**: Directory to save .png files (default: same as input)
 - **--remove**: Remove original .avif files after conversion
 - **--recursive**: Recursively search for .avif files in subdirectories
 - **--silent**: No output to command line, only finishing result
-- **--qb_color N**: Quantization bits for color images (1–8)
-- **--qb_gray_color N**: Quantization bits for grayscale+one images (1–8)
-- **--qb_gray N**: Quantization bits for grayscale images (1–8)
-- **--method N**: Quantization method: 0=Median Cut, 1=Max Coverage, 2=Fast Octree
-- **--dither N**: Dither: 0=None, 1=Floyd-Steinberg
-- **--log N**: Set logging level: 0=off, 1=error, 2=warning, 3=info, 4=debug
-- **--chk_bit**: Check and display real bit depth (unique color count) for each converted image or single file
+- **--qb_color BIT_COUNT**: Quantization bits for color images (1–8, 2–256 colors)
+- **--qb_gray_color BIT_COUNT**: Quantization bits for grayscale+one images (1–8, 2–256 levels)
+- **--qb_gray BIT_COUNT**: Quantization bits for grayscale images (1–8, 2–256 levels)
+- **--method {0,1,2}**: Quantization method: 0=Median Cut, 1=Max Coverage, 2=Fast Octree
+- **--dither {0,1}**: Dither: 0=None, 1=Floyd-Steinberg
+- **--chk_bit**: Check and display real bit depth for each converted image or file
 - **--save**: Save current CLI options to the [CLI] block in options.ini and exit
 - **--options**: Load CLI options from the [CLI] block in options.ini (overrides other CLI args except input_dir)
 - **--version**: Show version and exit
 - **--check-update**: Check for updates and exit
 
+## Usage & Help
+
+```
+A2P_Cli - AVIF to PNG Converter
+
+USAGE:
+  python main.py
+  python main.py input_dir [OPTIONS]
+  python main.py -h | --help      Show this message
+  python main.py -v | --version  Show version
+  python main.py -u | --check-update  Check for updates
+
+EXAMPLES:
+  python main.py images/ --qb_color 4 --method 1
+  python main.py images/example.avif --chk_bit
+
+OPTIONS:
+  --output_dir DIR         Directory to save .png files (default: same as input)
+  --remove                 Remove original .avif files after conversion
+  --recursive              Recursively search for .avif files in subdirectories
+  --silent                 No output to command line, only finishing result
+  --qb_color BIT_COUNT     Quantization bits for color images (1–8, 2–256 colors)
+  --qb_gray_color BIT_COUNT Quantization bits for grayscale+one images (1–8, 2–256 levels)
+  --qb_gray BIT_COUNT      Quantization bits for grayscale images (1–8, 2–256 levels)
+  --method {0,1,2}        Quantization method: 0=Median Cut, 1=Max Coverage, 2=Fast Octree
+  --dither {0,1}          Dither: 0=None, 1=Floyd-Steinberg
+  --chk_bit               Check and display real bit depth for each converted image or file
+  --save                  Save current options to options.ini [CLI block]
+  --options               Load options from options.ini [CLI block]
+  -v, --version           Show version and exit
+  -u, --check-update      Check for updates and exit
+
+COMMON OPTIONS can be saved/loaded in options.ini (CLI) or set in TUI.
+```
+
 ## Usage Examples
+
 ```sh
 # Launch TUI (interactive menu)
 python main.py
@@ -82,10 +123,6 @@ python main.py images/ --qb_color 8 --recursive --save
 
 # Use saved options, override input_dir
 python main.py images2/ --options
-
-# Check version or updates
-python main.py --version
-python main.py --check-update
 ```
 
 ## Logging
