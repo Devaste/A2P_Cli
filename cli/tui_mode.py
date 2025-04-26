@@ -16,7 +16,7 @@ INVALID_QB_MSG = "Invalid: must be 1-8 or blank for full color."
 
 @log_call
 def quant_bits_display_dynamic(val, label):
-    if val == 0:
+    if val in (0, None):
         return f"Quantization bits ({label}): off (full color)"
     else:
         return f"Quantization bits ({label}): {val} ({2**val} levels)"
