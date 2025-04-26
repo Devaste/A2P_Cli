@@ -12,6 +12,7 @@ from cli.globals import cli_args, STATUS_COLORS
 from cli.options_io import save_options, load_options
 import threading
 CANCELED_MSG = "Canceled."
+INVALID_QB_MSG = "Invalid: must be 1-8 or blank for full color."
 
 @log_call
 def quant_bits_display_dynamic(val, label):
@@ -217,13 +218,19 @@ class EditOptionsScreen(Screen):
             prev = cli_args.get('qb_color')
             if val is None:
                 self.update_status(CANCELED_MSG, "INFO")
+            elif not val.strip():
+                cli_args['qb_color'] = None
+                self.update_status("Color quantization off (full color)", "INFO")
             else:
-                new_val = int(val) if val.strip() else 0
-                if new_val != prev:
-                    cli_args['qb_color'] = new_val
-                    self.update_status(quant_bits_display_dynamic(new_val, "color"), "INFO")
+                new_val = int(val)
+                if 1 <= new_val <= 8:
+                    if new_val != prev:
+                        cli_args['qb_color'] = new_val
+                        self.update_status(quant_bits_display_dynamic(new_val, "color"), "INFO")
+                    else:
+                        self.update_status("", "INFO")
                 else:
-                    self.update_status("", "INFO")
+                    self.update_status(INVALID_QB_MSG, "ERROR")
         await self.app.push_screen(InputDialog("Quantization bits for color images (1-8, blank/off for full color):", str(cli_args['qb_color']) if cli_args['qb_color'] else "", callback=set_qb_color))
 
     @log_call
@@ -232,13 +239,19 @@ class EditOptionsScreen(Screen):
             prev = cli_args.get('qb_gray_color')
             if val is None:
                 self.update_status(CANCELED_MSG, "INFO")
+            elif not val.strip():
+                cli_args['qb_gray_color'] = None
+                self.update_status("Grayscale+one quantization off (full color)", "INFO")
             else:
-                new_val = int(val) if val.strip() else 0
-                if new_val != prev:
-                    cli_args['qb_gray_color'] = new_val
-                    self.update_status(quant_bits_display_dynamic(new_val, "grayscale+one"), "INFO")
+                new_val = int(val)
+                if 1 <= new_val <= 8:
+                    if new_val != prev:
+                        cli_args['qb_gray_color'] = new_val
+                        self.update_status(quant_bits_display_dynamic(new_val, "grayscale+one"), "INFO")
+                    else:
+                        self.update_status("", "INFO")
                 else:
-                    self.update_status("", "INFO")
+                    self.update_status(INVALID_QB_MSG, "ERROR")
         await self.app.push_screen(InputDialog("Quantization bits for grayscale+one images (1-8, blank/off for full color):", str(cli_args['qb_gray_color']) if cli_args['qb_gray_color'] else "", callback=set_qb_gray_color))
 
     @log_call
@@ -248,7 +261,6 @@ class EditOptionsScreen(Screen):
             if val is None:
                 self.update_status(CANCELED_MSG, "INFO")
             elif not val.strip():
-                # Blank input: treat as 'off'/full color (None)
                 cli_args['qb_gray'] = None
                 self.update_status("Grayscale quantization off (full color)", "INFO")
             else:
@@ -260,7 +272,7 @@ class EditOptionsScreen(Screen):
                     else:
                         self.update_status("", "INFO")
                 else:
-                    self.update_status("Invalid: must be 1-8 or blank for full color.", "ERROR")
+                    self.update_status(INVALID_QB_MSG, "ERROR")
         await self.app.push_screen(InputDialog("Quantization bits for grayscale images (1-8, blank/off for full color):", str(cli_args['qb_gray']) if cli_args['qb_gray'] else "", callback=set_qb_gray))
 
     @log_call
