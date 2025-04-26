@@ -20,17 +20,27 @@ A modular, robust tool for converting AVIF images to PNG with advanced quantizat
 ```
 A2P_Cli/
 ├── cli/
-│   ├── tui_mode.py       # TUI logic
-│   ├── script_mode.py    # CLI/script logic
-│   ├── args.py           # Argument parsing & MAN-style help
+│   ├── args.py           # Argument parsing & help
+│   ├── config.py         # CLI/TUI config helpers
+│   ├── globals.py        # Shared CLI globals
 │   ├── options_io.py     # Config load/save
+│   ├── script_mode.py    # CLI/script logic
+│   ├── tui_mode.py       # TUI logic
+│   ├── tui_utils.py      # TUI helper functions
+│   └── __init__.py
 ├── logic/
 │   ├── convert.py        # Conversion logic
 │   ├── logging_config.py # Logging setup & decorators
 │   ├── update_check.py   # Version/update check
+│   └── __init__.py
 ├── main.py               # Entry point
-├── README.md
-...
+├── requirements.txt      # Python dependencies
+├── VERSION               # App version
+├── CHANGELOG.md          # Release notes
+├── README.md             # This file
+├── LICENSE
+├── icon.ico
+├── .gitignore
 ```
 
 **Note:** Anywhere you see `python main.py`, you can also use `a2pcli` or `a2pcli.exe` if installed globally or on Windows. All CLI commands and options are identical.
