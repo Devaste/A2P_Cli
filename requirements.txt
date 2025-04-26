@@ -1,6 +1,6 @@
-Pillow>=9.0.0
-numpy>=1.19.0
-requests~=2.32.3
-textual~=0.47.1
-rich~=14.0.0
-pillow-avif-plugin
+Pillow>=11.2.1
+numpy>=2.2.5
+requests>=2.32.3
+textual>=3.1.1
+rich>=14.0.0
+pillow-avif-plugin >=1.5.2
