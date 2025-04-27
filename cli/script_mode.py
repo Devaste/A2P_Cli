@@ -1,4 +1,4 @@
-from cli.options_io import load_options, save_options
+from logic.options_io import load_options, save_options
 from cli.args import parse_cli_args
 from logic.convert import convert_avif_to_png, get_real_bit_count
 from pathlib import Path
@@ -94,15 +94,10 @@ def run():
         if args.get('version'):
             from logic.update_check import get_local_version
             print(f"A2P_Cli version: {get_local_version()}")
+            return
         elif args.get('check_update'):
-            from logic.update_check import get_local_version, get_latest_version
-            local = get_local_version()
-            latest = get_latest_version()
-            if latest == local:
-                print(f"You are running the latest version: {local}.")
-            else:
-                print(f"Update available: {latest} (You have {local})")
-        return
+            handle_update_check(args)
+            return
     if mode == 'functional':
         # Functional logic (save/options) can be handled here if needed
         pass  # Extend as needed

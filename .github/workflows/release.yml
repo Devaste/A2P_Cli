@@ -98,6 +98,14 @@ jobs:
         id: changelog
         run: |
           awk '/^## \[/{if (p) exit; p=1} p' CHANGELOG.md > LATEST_CHANGELOG.md
+      - name: Create Python source zip archive
+        run: |
+          zip -r A2P_Cli-py.zip . -x '*.git*' '*.venv*' '*dist*' '*__pycache__*' '*tests*'
+      - name: Create Python source tar.gz archive
+        run: |
+          tar --exclude='./.git' --exclude='./.venv' --exclude='./dist' \
+              --exclude='./__pycache__' --exclude='./tests' \
+              -czf A2P_Cli-py.tar.gz ./*.py cli gui logic requirements.txt VERSION options.ini
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -108,3 +116,5 @@ jobs:
           files: |
             ./dist/win/A2P_Cli.exe
             ./dist/linux/A2P_Cli
+            ./A2P_Cli-py.zip
+            ./A2P_Cli-py.tar.gz

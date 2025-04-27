@@ -1,9 +1,25 @@
 # Centralized configuration for A2P_Cli 2.0-beta
 
-# Default values for CLI options
+# Default values for CLI and GUI options
+DEFAULT_QB_COLOR = None  # None means no quantization (full color)
+DEFAULT_QB_GRAY_COLOR = None
+DEFAULT_QB_GRAY = None
 DEFAULT_METHOD = 2  # 0=Median Cut, 1=Max Coverage, 2=Fast Octree
 DEFAULT_DITHER = 1  # 0=None, 1=Floyd-Steinberg
-DEFAULT_LOG_LEVEL = 0  # 0=off, 1=error, 2=warning, 3=info, 4=debug
+
+# Default options dictionary (used for initializing option state)
+OPTIONS_DEFAULTS = {
+    "input_dir": "",
+    "output_dir": "",
+    "remove": False,
+    "recursive": False,
+    "silent": False,
+    "qb_color": DEFAULT_QB_COLOR,
+    "qb_gray_color": DEFAULT_QB_GRAY_COLOR,
+    "qb_gray": DEFAULT_QB_GRAY,
+    "method": DEFAULT_METHOD,
+    "dither": DEFAULT_DITHER,
+}
 
 # Choices and descriptions for options
 METHOD_CHOICES = {

@@ -18,7 +18,7 @@ def main():
     Runs TUI if no arguments are given, otherwise runs CLI/script mode.
     """
     if len(sys.argv) == 1:
-        from cli.tui_mode import run as main_menu_run
+        from gui.qt_app import run as main_menu_run
         main_menu_run()
     else:
         from cli.script_mode import run as script_mode_run

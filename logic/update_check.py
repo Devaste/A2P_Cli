@@ -29,8 +29,9 @@ def get_local_version():
 
 @log_call
 def get_latest_version():
+    headers = {'User-Agent': 'A2P_Cli-Updater'}
     try:
-        resp = requests.get(LATEST_VERSION_URL, timeout=5)
+        resp = requests.get(LATEST_VERSION_URL, headers=headers, timeout=5)
         if resp.ok:
             return resp.text.strip()
     except Exception:
@@ -55,13 +56,21 @@ def get_latest_release_assets():
     """
     Fetches the latest release assets from the GitHub API.
     Returns a dict mapping asset names to their download URLs.
+    Adds 'A2P_Cli-py.zip' and 'A2P_Cli-py.tar.gz' if present.
     """
     api_url = "https://api.github.com/repos/Devaste/A2P_Cli/releases/latest"
+    headers = {'User-Agent': 'A2P_Cli-Updater'}
     try:
-        resp = requests.get(api_url, timeout=10)
+        resp = requests.get(api_url, headers=headers, timeout=10)
         resp.raise_for_status()
         data = resp.json()
-        return {asset['name']: asset['browser_download_url'] for asset in data.get('assets', [])}
+        assets = {asset['name']: asset['browser_download_url'] for asset in data.get('assets', [])}
+        # Add GitHub auto-generated source code archives as fallback
+        if 'zipball_url' in data:
+            assets['Source code (zip)'] = data['zipball_url']
+        if 'tarball_url' in data:
+            assets['Source code (tar.gz)'] = data['tarball_url']
+        return assets
     except Exception as e:
         print(f"[Update] Failed to fetch release assets: {e}")
         return {}
@@ -69,28 +78,39 @@ def get_latest_release_assets():
 @log_call
 def select_update_asset(assets):
     """
-    Selects the correct asset name and URL based on platform and app type.
+    Select the correct asset for update based on how the app was launched.
     Returns (asset_name, asset_url, asset_type).
+    - .exe if running from a2pcli.exe (Windows frozen)
+    - a2pcli if running from a2pcli (Linux/Mac frozen)
+    - .zip if running as .py on Windows
+    - .tar.gz if running as .py on Linux/Mac
     """
-    if getattr(sys, 'frozen', False):
-        if sys.platform == 'win32':
-            for name in assets:
-                if name.lower().endswith('.exe'):
-                    return name, assets[name], 'exe'
+    exe_name = 'A2P_Cli.exe'
+    bin_name = 'A2P_Cli'
+    zip_name = 'A2P_Cli-py.zip'
+    tar_name = 'A2P_Cli-py.tar.gz'
+
+    is_frozen = getattr(sys, 'frozen', False)
+    is_win = sys.platform == 'win32'
+
+    if is_frozen:
+        # Running as frozen executable
+        if is_win:
+            # Look for the Windows executable
+            if exe_name in assets:
+                return exe_name, assets[exe_name], 'exe'
         else:
-            for name in assets:
-                if name == 'A2P_Cli':
-                    return name, assets[name], 'bin'
+            # Look for the Unix executable
+            if bin_name in assets:
+                return bin_name, assets[bin_name], 'bin'
     else:
-        # Prefer tar.gz for Unix, zip for Windows
-        if sys.platform == 'win32':
-            for name in assets:
-                if name.endswith('.zip'):
-                    return name, assets[name], 'zip'
+        # Running as Python script
+        if is_win:
+            if zip_name in assets:
+                return zip_name, assets[zip_name], 'zip'
         else:
-            for name in assets:
-                if name.endswith('.tar.gz'):
-                    return name, assets[name], 'tar.gz'
+            if tar_name in assets:
+                return tar_name, assets[tar_name], 'tar.gz'
     return None, None, None
 
 @log_call
@@ -141,6 +161,7 @@ def extract_asset(asset_type, asset_path, extract_dir, asset_name):
 @log_call
 def write_updater_script(updater_path):
     updater_code = '''import os, sys, shutil, time, subprocess
+import traceback
 
 def find_new_root(new_dir):
     for d in os.listdir(new_dir):
@@ -181,11 +202,16 @@ def main():
     asset_name = sys.argv[4]
     relaunch_cmd = sys.argv[5:]
     time.sleep(1)
-    if asset_type in ('zip', 'tar.gz'):
-        update_from_archive(old_dir, new_dir)
-    else:
-        update_binary(old_dir, new_dir, asset_name)
-    subprocess.Popen(relaunch_cmd)
+    try:
+        if asset_type in ('zip', 'tar.gz'):
+            update_from_archive(old_dir, new_dir)
+        else:
+            update_binary(old_dir, new_dir, asset_name)
+        print("[Update] Update complete! Relaunching app...")
+        subprocess.Popen(relaunch_cmd)
+    except Exception as e:
+        print(f"[Update] Update failed: {e}\n{traceback.format_exc()}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
@@ -200,12 +226,22 @@ def launch_updater_and_exit(updater_path, old_dir, extract_dir, asset_type, asse
     os._exit(0)
 
 @log_call
-def download_and_prepare_update():
+def cleanup_and_report(temp_dir, msg):
+    try:
+        shutil.rmtree(temp_dir)
+    except Exception:
+        pass
+    print(msg)
+
+@log_call
+def download_and_prepare_update(asset_url=None, asset_name=None, asset_type=None):
     """
-    Download the correct asset for update, extract/replace as needed, write updater, and launch updater.
+    Download the specified asset for update, extract/replace as needed, write updater, and launch updater.
+    If asset_url, asset_name, asset_type are not provided, fetch and select automatically (CLI fallback).
     """
-    assets = get_latest_release_assets()
-    asset_name, asset_url, asset_type = select_update_asset(assets)
+    if asset_url is None or asset_name is None or asset_type is None:
+        assets = get_latest_release_assets()
+        asset_name, asset_url, asset_type = select_update_asset(assets)
     if not asset_url:
         print("[Update] No suitable update asset found.")
         return False
@@ -218,10 +254,10 @@ def download_and_prepare_update():
     relaunch_cmd = get_relaunch_cmd()
 
     if not download_asset(asset_url, asset_path):
-        shutil.rmtree(temp_dir)
+        cleanup_and_report(temp_dir, "[Update] Download failed.")
         return False
     if not extract_asset(asset_type, asset_path, extract_dir, asset_name):
-        shutil.rmtree(temp_dir)
+        cleanup_and_report(temp_dir, "[Update] Extraction failed.")
         return False
     write_updater_script(updater_path)
     launch_updater_and_exit(updater_path, old_dir, extract_dir, asset_type, asset_name, relaunch_cmd)
@@ -229,11 +265,17 @@ def download_and_prepare_update():
 
 @log_call
 def check_for_update():
-    local_version = get_local_version()
-    latest_version = get_latest_version()
-    if not local_version or not latest_version:
-        return  # Silently skip if cannot check
-    if latest_version != local_version:
-        print(f"\nUpdate available: {latest_version} (You have {local_version})")
-        print(f"Visit {RELEASES_URL} to download the latest version.\n")
-        download_and_prepare_update()
+    local = get_local_version()
+    latest = get_latest_version()
+    if not latest or not local:
+        print("[Update] Could not determine version information.")
+    elif latest == local:
+        print(f"[Update] You are running the latest version: {local}.")
+    else:
+        print(f"Update available: {latest} (You have {local})")
+        answer = input("Update now? [Y/n]: ").strip().lower()
+        if answer in ("", "y", "yes"):
+            try:
+                download_and_prepare_update()
+            except Exception as e:
+                print(f"[Update] Error: {e}")
