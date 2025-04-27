@@ -105,7 +105,8 @@ jobs:
         run: |
           tar --exclude='./.git' --exclude='./.venv' --exclude='./dist' \
               --exclude='./__pycache__' --exclude='./tests' \
-              -czf A2P_Cli-py.tar.gz ./*.py cli gui logic requirements.txt VERSION options.ini
+              --exclude='./options.ini' --exclude='./a2pcli.log' \
+              -czf A2P_Cli-py.tar.gz ./*.py cli gui logic requirements.txt VERSION
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
