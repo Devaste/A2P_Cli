@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
+## [2.3.0] - 2025-04-27
+### Changed
+- Updater will not relaunch the app after CLI update (no GUI/TUI launch after CLI update).
+- All updater logs now go only to file, not to the console.
+- Windows update relaunch is now fully detached, no more PowerShell lock or error dialogs.
+- Patch-based updates and clean exit logic improved for all modes.
+
 ## [2.2.0] - 2025-04-27
 ### Changed
 - Unified update logic for both GUI and CLI (platform-aware asset selection, direct asset passing, robust fallback).

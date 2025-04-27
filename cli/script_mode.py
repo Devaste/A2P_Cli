@@ -43,12 +43,12 @@ def handle_update_check(args):
             print(f"Update available: {latest} (You have {local})")
             if args.get('silent', False):
                 print("[Update] Running in silent mode: updating without prompt...")
-                download_and_prepare_update()
+                download_and_prepare_update(no_relaunch=True)
                 sys.exit(0)
             else:
                 resp = input("Would you like to update now? [Y/n]: ").strip().lower()
                 if resp in ('', 'y', 'yes'):
-                    download_and_prepare_update()
+                    download_and_prepare_update(no_relaunch=True)
                 else:
                     print("Update skipped.")
                 sys.exit(0)

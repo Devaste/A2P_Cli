@@ -98,15 +98,38 @@ jobs:
         id: changelog
         run: |
           awk '/^## \[/{if (p) exit; p=1} p' CHANGELOG.md > LATEST_CHANGELOG.md
-      - name: Create Python source zip archive
+      - name: Create Python source zip archive (full release)
         run: |
           zip -r A2P_Cli-py.zip . -x '*.git*' '*.venv*' '*dist*' '*__pycache__*' '*tests*'
-      - name: Create Python source tar.gz archive
+      - name: Create Python source tar.gz archive (full release)
         run: |
           tar --exclude='./.git' --exclude='./.venv' --exclude='./dist' \
               --exclude='./__pycache__' --exclude='./tests' \
               --exclude='./options.ini' --exclude='./a2pcli.log' \
               -czf A2P_Cli-py.tar.gz ./*.py cli gui logic requirements.txt VERSION
+      - name: Get previous release tag
+        id: prev_tag
+        run: |
+          PREV_TAG=$(git tag --sort=-creatordate | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -n 2 | tail -n 1)
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+      - name: Create patch zip archive (changed files since previous release)
+        run: |
+          if [ -n "${{ steps.prev_tag.outputs.prev_tag }}" ]; then
+            git diff --name-only ${{ steps.prev_tag.outputs.prev_tag }} HEAD > changed_files.txt
+            echo VERSION >> changed_files.txt
+            zip A2P_Cli-patch.zip -@ < changed_files.txt
+          else
+            echo "No previous tag found, skipping patch archive."
+          fi
+      - name: Create patch tar.gz archive (changed files since previous release)
+        run: |
+          if [ -n "${{ steps.prev_tag.outputs.prev_tag }}" ]; then
+            git diff --name-only ${{ steps.prev_tag.outputs.prev_tag }} HEAD > changed_files.txt
+            echo VERSION >> changed_files.txt
+            tar -czf A2P_Cli-patch.tar.gz -T changed_files.txt
+          else
+            echo "No previous tag found, skipping patch archive."
+          fi
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -119,3 +142,5 @@ jobs:
             ./dist/linux/A2P_Cli
             ./A2P_Cli-py.zip
             ./A2P_Cli-py.tar.gz
+            ./A2P_Cli-patch.zip
+            ./A2P_Cli-patch.tar.gz
