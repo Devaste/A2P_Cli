@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
+## [2.2.0] - 2025-04-27
+### Changed
+- Unified update logic for both GUI and CLI (platform-aware asset selection, direct asset passing, robust fallback).
+- GUI update flow now always uses the correct asset for the running context.
+- User-Agent header added to all GitHub API requests for update checks (GitHub API best practices).
+- Workflow now excludes options.ini and log files from release archives.
+- Project structure and documentation updated for new update mechanism and packaging.
+
+### Fixed
+- Prevented accidental packaging of local config/log files in source distributions.
+
 ## [2.1.0] - 2025-04-27
 ### Added
 - Robust self-updating mechanism for all deployment types (Windows EXE, Unix binary, Python script).
