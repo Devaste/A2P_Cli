@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QThread, pyqtSignal
 from logic.convert import convert_avif_to_png
-from logic.config import OPTIONS_DEFAULTS, METHOD_CHOICES, DITHER_CHOICES
+from logic.config import OPTIONS_DEFAULTS, METHOD_CHOICES, DITHER_CHOICES, DEFAULT_MAX_WORKERS
 from logic.update_check import get_local_version, get_latest_version, download_and_prepare_update
 from logic.options_io import save_options, load_options
 
@@ -33,6 +33,7 @@ class ConversionThread(QThread):
                 qb_gray=self.options.get("qb_gray"),
                 method=self.options.get("method"),
                 dither=self.options.get("dither"),
+                max_workers=self.options.get("max_workers"),
                 progress_callback=progress_callback
             )
             self.finished.emit("Conversion complete!")
@@ -104,6 +105,13 @@ class MainWindow(QMainWindow):
         method_layout.addWidget(QLabel("Dither:"))
         method_layout.addWidget(self.dither_combo)
         layout.addLayout(method_layout)
+        # Max Workers
+        maxw_layout = QHBoxLayout()
+        self.maxw_edit = QLineEdit()
+        self.maxw_edit.setPlaceholderText(f"Threads (default: {DEFAULT_MAX_WORKERS})")
+        maxw_layout.addWidget(QLabel("Threads:"))
+        maxw_layout.addWidget(self.maxw_edit)
+        layout.addLayout(maxw_layout)
         # Buttons
         btn_layout = QHBoxLayout()
         self.convert_btn = QPushButton("Convert")
@@ -152,6 +160,15 @@ class MainWindow(QMainWindow):
         opts["qb_gray"] = self._parse_int(self.qb_gray_edit.text())
         opts["method"] = self.method_combo.currentData()
         opts["dither"] = self.dither_combo.currentData()
+        # Max workers (threads)
+        try:
+            mw = int(self.maxw_edit.text())
+            if mw > 0:
+                opts["max_workers"] = mw
+            else:
+                opts["max_workers"] = DEFAULT_MAX_WORKERS
+        except Exception:
+            opts["max_workers"] = DEFAULT_MAX_WORKERS
         return opts
 
     def _parse_int(self, val):
@@ -239,6 +256,7 @@ class MainWindow(QMainWindow):
             idx = self.dither_combo.findData(dither)
             if idx >= 0:
                 self.dither_combo.setCurrentIndex(idx)
+        self.maxw_edit.setText(str(opts.get("max_workers", DEFAULT_MAX_WORKERS)))
 
     def closeEvent(self, event):
         if self.thread is not None and hasattr(self.thread, "isRunning") and self.thread.isRunning():

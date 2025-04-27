@@ -1,5 +1,6 @@
 import argparse
 from logic.logging_config import log_call
+from logic.config import DEFAULT_MAX_WORKERS
 
 @log_call
 def parse_cli_args():
@@ -32,6 +33,7 @@ def parse_cli_args():
     parser.add_argument("--method", type=int, choices=[0, 1, 2], help="Quantization method: 0=Median Cut, 1=Max Coverage, 2=Fast Octree")
     parser.add_argument("--dither", type=int, choices=[0, 1], help="Dither: 0=None, 1=Floyd-Steinberg")
     parser.add_argument("--chk_bit", action="store_true", help="Check and display real bit depth for each converted image or file.")
+    parser.add_argument("--max_workers", type=int, default=DEFAULT_MAX_WORKERS, help=f"Number of threads for parallel conversion (default: {DEFAULT_MAX_WORKERS})")
 
     # === Functional Options ===
     parser.add_argument("--save", action="store_true", help="Save current CLI options to the [CLI] block in options.ini and exit.")

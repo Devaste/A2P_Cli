@@ -10,6 +10,8 @@ import logging
 import traceback
 import numpy as np
 from logic.logging_config import log_call
+from logic.config import DEFAULT_MAX_WORKERS
+import concurrent.futures
 
 GREYSCALE_ONE_LABEL = "GREYSCALE+ONE"
 FULL_COLOR_LABEL = "FULL COLOR"
@@ -172,7 +174,7 @@ def _remove_original_if_requested(avif_file, remove):
         print(f"[WARN] Failed to remove {avif_file}: {e}")
 
 @log_call
-def convert_avif_to_png(input_dir, output_dir=None, remove=False, recursive=False, silent=False, qb_color=None, qb_gray_color=None, qb_gray=None, progress_callback=None, progress_printer=None, **kwargs):
+def convert_avif_to_png(input_dir, output_dir=None, remove=False, recursive=False, silent=False, qb_color=None, qb_gray_color=None, qb_gray=None, progress_callback=None, progress_printer=None, max_workers=DEFAULT_MAX_WORKERS, **kwargs):
     input_path = Path(input_dir)
     if not input_path.exists():
         logging.error(f"Input directory '{input_dir}' does not exist.")
@@ -185,16 +187,31 @@ def convert_avif_to_png(input_dir, output_dir=None, remove=False, recursive=Fals
         return {"success": 0, "fail": 0}
     success, fail = 0, 0
     total = len(avif_files)
-    for idx, avif_file in enumerate(avif_files, 1):
+    results = [None] * total
+
+    def convert_task(idx_avif):
+        idx, avif_file = idx_avif
         png_file = _resolve_png_file(avif_file, input_path, output_path, output_dir, recursive)
         converted = convert_single_image(avif_file, png_file, silent, progress_printer=progress_printer, qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray, **kwargs)
         if converted:
             _remove_original_if_requested(avif_file, remove)
-            success += 1
-        else:
-            fail += 1
         if progress_callback:
-            progress_callback(idx, total)
+            progress_callback(idx + 1, total)
+        return converted
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_idx = {executor.submit(convert_task, (idx, avif_file)): idx for idx, avif_file in enumerate(avif_files)}
+        for future in concurrent.futures.as_completed(future_to_idx):
+            idx = future_to_idx[future]
+            try:
+                result = future.result()
+                results[idx] = result
+            except Exception as exc:
+                logging.error(f"Exception during conversion: {exc}\n{traceback.format_exc()}")
+                results[idx] = False
+
+    success = sum(1 for r in results if r)
+    fail = total - success
     return {"success": success, "fail": fail}
 
 @log_call

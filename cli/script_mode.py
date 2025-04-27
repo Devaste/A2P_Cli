@@ -79,7 +79,8 @@ def run_conversion(args):
         method=args['method'],
         dither=args['dither'],
         chk_bit=args['chk_bit'],
-        progress_printer=print
+        progress_printer=print,
+        max_workers=args.get('max_workers', 4)
     )
     if not args['silent']:
         if result is not None and isinstance(result, dict):

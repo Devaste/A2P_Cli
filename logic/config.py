@@ -6,6 +6,7 @@ DEFAULT_QB_GRAY_COLOR = None
 DEFAULT_QB_GRAY = None
 DEFAULT_METHOD = 2  # 0=Median Cut, 1=Max Coverage, 2=Fast Octree
 DEFAULT_DITHER = 1  # 0=None, 1=Floyd-Steinberg
+DEFAULT_MAX_WORKERS = 4
 
 # Default options dictionary (used for initializing option state)
 OPTIONS_DEFAULTS = {
@@ -19,6 +20,7 @@ OPTIONS_DEFAULTS = {
     "qb_gray": DEFAULT_QB_GRAY,
     "method": DEFAULT_METHOD,
     "dither": DEFAULT_DITHER,
+    "max_workers": DEFAULT_MAX_WORKERS,
 }
 
 # Choices and descriptions for options

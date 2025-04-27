@@ -1,6 +1,6 @@
 # A2P_Cli - AVIF to PNG Converter
 
-**Version 2.2.0 (2025-04-27)**
+**Version 2.4.0 (2025-04-27)**
 
 A modular, robust tool for converting AVIF images to PNG with advanced quantization, dithering, and both interactive TUI and scriptable CLI modes. Features centralized logging, persistent config, and a clean, maintainable codebase.
 
