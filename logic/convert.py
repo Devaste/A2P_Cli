@@ -12,6 +12,8 @@ import numpy as np
 from logic.logging_config import log_call
 from logic.config import DEFAULT_MAX_WORKERS
 import concurrent.futures
+import os
+import time
 
 GREYSCALE_ONE_LABEL = "GREYSCALE+ONE"
 FULL_COLOR_LABEL = "FULL COLOR"
@@ -190,13 +192,19 @@ def convert_avif_to_png(input_dir, output_dir=None, remove=False, recursive=Fals
 
     def convert_task(idx_avif):
         idx, avif_file = idx_avif
+        start = time.time()
         png_file = _resolve_png_file(avif_file, input_path, output_path, output_dir, recursive)
-        converted = convert_single_image(avif_file, png_file, silent, progress_printer=progress_printer, qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray, **kwargs)
+        converted = convert_single_image(avif_file, png_file, silent, progress_printer=progress_printer,
+                                         qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray, **kwargs)
         if converted:
             _remove_original_if_requested(avif_file, remove)
+        duration = time.time() - start
+        logging.debug(f"Converted {avif_file} in {duration:.2f}s")
         if progress_callback:
             progress_callback(idx + 1, total)
         return converted
+
+    avif_files = sorted(avif_files, key=lambda f: os.path.getsize(f), reverse=True)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_idx = {executor.submit(convert_task, (idx, avif_file)): idx for idx, avif_file in enumerate(avif_files)}
