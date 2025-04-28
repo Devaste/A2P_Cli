@@ -24,7 +24,7 @@ def get_local_version():
     try:
         with open(resource_path('VERSION'), encoding='utf-8') as f:
             return f.read().strip()
-    except Exception:
+    except OSError:
         return None
 
 @log_call
@@ -34,7 +34,7 @@ def get_latest_version():
         resp = requests.get(LATEST_VERSION_URL, headers=headers, timeout=5)
         if resp.ok:
             return resp.text.strip()
-    except Exception:
+    except requests.exceptions.RequestException:
         pass
     return None
 
@@ -333,7 +333,7 @@ def download_and_prepare_update(asset_url=None, asset_name=None, asset_type=None
 def cleanup_and_report(temp_dir, msg):
     try:
         shutil.rmtree(temp_dir)
-    except Exception:
+    except OSError:
         pass
     print(msg)
 

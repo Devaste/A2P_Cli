@@ -90,7 +90,7 @@ def _quantize_if_requested(img, png_file, qb_val, mode, silent, label, progress_
     if qb_val is not None and str(qb_val).strip() != "":
         try:
             bits = int(qb_val)
-        except Exception:
+        except ValueError:
             bits = None
         if bits is not None and 1 <= bits <= 8:
             quant_colors = 2 ** bits
@@ -185,7 +185,6 @@ def convert_avif_to_png(input_dir, output_dir=None, remove=False, recursive=Fals
     if not avif_files:
         logging.warning(f"No AVIF files found in '{input_dir}'.")
         return {"success": 0, "fail": 0}
-    success, fail = 0, 0
     total = len(avif_files)
     results = [None] * total
 
