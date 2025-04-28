@@ -19,6 +19,23 @@ GREYSCALE_ONE_LABEL = "GREYSCALE+ONE"
 FULL_COLOR_LABEL = "FULL COLOR"
 
 @log_call
+def batch_files_by_size(avif_files, target_batch_size_bytes):
+    batches = []
+    current_batch = []
+    current_size = 0
+    for f in avif_files:
+        size = os.path.getsize(f)
+        if current_size + size > target_batch_size_bytes and current_batch:
+            batches.append(list(current_batch))
+            current_batch = []
+            current_size = 0
+        current_batch.append(f)
+        current_size += size
+    if current_batch:
+        batches.append(current_batch)
+    return batches
+
+@log_call
 def is_greyscale(img):
     """Check if a PIL Image is greyscale."""
     if img.mode in ("L", "LA"):
@@ -190,32 +207,47 @@ def convert_avif_to_png(input_dir, output_dir=None, remove=False, recursive=Fals
     total = len(avif_files)
     results = [None] * total
 
-    def convert_task(idx_avif):
-        idx, avif_file = idx_avif
-        start = time.time()
-        png_file = _resolve_png_file(avif_file, input_path, output_path, output_dir, recursive)
-        converted = convert_single_image(avif_file, png_file, silent, progress_printer=progress_printer,
-                                         qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray, **kwargs)
-        if converted:
-            _remove_original_if_requested(avif_file, remove)
-        duration = time.time() - start
-        logging.debug(f"Converted {avif_file} in {duration:.2f}s")
-        if progress_callback:
-            progress_callback(idx + 1, total)
-        return converted
+    # Set batch size to 5 MB
+    target_batch_size_bytes = 5 * 1024 * 1024
 
+    # Sort files by size (largest first)
     avif_files = sorted(avif_files, key=lambda f: os.path.getsize(f), reverse=True)
+    batches = batch_files_by_size(avif_files, target_batch_size_bytes)
+    total = len(avif_files)
+    progress_counter = [0]  # Mutable counter for progress reporting
+
+    def convert_batch(batch):
+        results = []
+        for avif_file in batch:
+            start = time.time()
+            png_file = _resolve_png_file(avif_file, input_path, output_path, output_dir, recursive)
+            converted = convert_single_image(
+                avif_file, png_file, silent, progress_printer=progress_printer,
+                qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray, **kwargs
+            )
+            if converted:
+                _remove_original_if_requested(avif_file, remove)
+            duration = time.time() - start
+            logging.debug(f"Converted {avif_file} in {duration:.2f}s")
+            if progress_callback:
+                progress_counter[0] += 1
+                progress_callback(progress_counter[0], total)
+            results.append(converted)
+        return results
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_idx = {executor.submit(convert_task, (idx, avif_file)): idx for idx, avif_file in enumerate(avif_files)}
-        for future in concurrent.futures.as_completed(future_to_idx):
-            idx = future_to_idx[future]
+        batch_futures = [executor.submit(convert_batch, batch) for batch in batches]
+        for future in concurrent.futures.as_completed(batch_futures):
             try:
-                result = future.result()
-                results[idx] = result
+                batch_results = future.result()
+                # Fill the main results list in order
+                # Option 1: If order doesn't matter, just extend
+                # results.extend(batch_results)
+                # Option 2: If you want to keep the original file order, you'll need to track which files were in each batch
+                # For now, just extend:
+                results.extend(batch_results)
             except Exception as exc:
-                logging.error(f"Exception during conversion: {exc}\n{traceback.format_exc()}")
-                results[idx] = False
+                logging.error(f"Exception during batch conversion: {exc}\n{traceback.format_exc()}")
 
     success = sum(1 for r in results if r)
     fail = total - success
