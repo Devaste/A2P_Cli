@@ -41,7 +41,8 @@ def parse_cli_args():
     parser.add_argument("-v", "--version", action="store_true", help="Show version and exit")
     parser.add_argument("-u", "--check-update", action="store_true", help="Check for updates and exit")
 
-    args = parser.parse_args()
+    args = parser.parse_known_args()
+    # Optionally: ignore or log unknown
     args_dict = vars(args)
 
     # Decide mode

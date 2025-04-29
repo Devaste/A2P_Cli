@@ -25,4 +25,6 @@ def main():
         script_mode_run()
 
 if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()
     main()
