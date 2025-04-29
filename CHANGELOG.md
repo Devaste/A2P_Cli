@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
+## [2.5.0] - 2025-04-29
+
+### Added
+- Light/dark theme support with persistent user preference (saved in options.ini)
+- Theme switcher button with custom SVG icons (moon/sun) for intuitive toggling
+- Modernized QSS stylesheets for both light and dark themes, ensuring identical layout and padding
+- Theme color adapts SVG icon color for consistent appearance
+
+### Changed
+- GUI now defaults to native look in light mode for better OS integration
+- Refactored QSS: separated light and dark styles, removed redundant styling
+- Improved options loading/saving for theme and quantization settings
+
+### Fixed
+- Status bar resize grip removed for a cleaner UI
+- Dither/method dropdowns now only show when relevant
+
+### Removed
+- Old, unused QSS and redundant per-widget style settings
+
 ## [2.4] - 2025-04-29
 ### Added
 - Multithreading for AVIF to PNG conversion (CLI & GUI)

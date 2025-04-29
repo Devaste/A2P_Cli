@@ -192,6 +192,28 @@ def _remove_original_if_requested(avif_file, remove):
     except OSError as e:
         print(f"[WARN] Failed to remove {avif_file}: {e}")
 
+def convert_worker(args):
+    avif_file, input_dir, output_dir, remove, recursive, silent, qb_color, qb_gray_color, qb_gray, kwargs = args
+    try:
+        avif_file = Path(avif_file)  # FIX: convert string to Path
+        input_path = Path(input_dir)
+        output_path = Path(output_dir) if output_dir else input_path
+        png_file = _resolve_png_file(avif_file, input_path, output_path, output_dir, recursive)
+        converted = convert_single_image(
+            avif_file, png_file, silent, progress_printer=None,
+            qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray, **kwargs
+        )
+        if converted and remove:
+            try:
+                remove_original_file(avif_file)
+            except Exception as e:
+                print(f"[WARN] Failed to remove {avif_file}: {e}")
+        return converted
+    except Exception as e:
+        import traceback
+        print(f"Exception in worker for {avif_file}: {e}\n{traceback.format_exc()}")
+        return False
+
 @log_call
 def convert_avif_to_png(input_dir, output_dir=None, remove=False, recursive=False, silent=False, qb_color=None, qb_gray_color=None, qb_gray=None, progress_callback=None, progress_printer=None, max_workers=DEFAULT_MAX_WORKERS, **kwargs):
     input_path = Path(input_dir)
@@ -206,49 +228,25 @@ def convert_avif_to_png(input_dir, output_dir=None, remove=False, recursive=Fals
         return {"success": 0, "fail": 0}
     total = len(avif_files)
     results = [None] * total
+    progress_counter = [0]
 
-    # Set batch size to 5 MB
-    target_batch_size_bytes = 5 * 1024 * 1024
-
-    # Sort files by size (largest first)
-    avif_files = sorted(avif_files, key=lambda f: os.path.getsize(f), reverse=True)
-    batches = batch_files_by_size(avif_files, target_batch_size_bytes)
-    total = len(avif_files)
-    progress_counter = [0]  # Mutable counter for progress reporting
-
-    def convert_batch(batch):
-        results = []
-        for avif_file in batch:
-            start = time.time()
-            png_file = _resolve_png_file(avif_file, input_path, output_path, output_dir, recursive)
-            converted = convert_single_image(
-                avif_file, png_file, silent, progress_printer=progress_printer,
-                qb_color=qb_color, qb_gray_color=qb_gray_color, qb_gray=qb_gray, **kwargs
-            )
-            if converted:
-                _remove_original_if_requested(avif_file, remove)
-            duration = time.time() - start
-            logging.debug(f"Converted {avif_file} in {duration:.2f}s")
+    # Prepare arguments for each worker
+    worker_args = [
+        (str(avif_file), str(input_dir), str(output_dir) if output_dir else None, remove, recursive, silent, qb_color, qb_gray_color, qb_gray, kwargs)
+        for avif_file in avif_files
+    ]
+    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(convert_worker, arg) for arg in worker_args]
+        for i, future in enumerate(concurrent.futures.as_completed(futures)):
+            try:
+                result = future.result()
+                results[i] = result
+            except Exception as exc:
+                logging.error(f"Exception during conversion: {exc}\n{traceback.format_exc()}")
+                results[i] = False
             if progress_callback:
                 progress_counter[0] += 1
                 progress_callback(progress_counter[0], total)
-            results.append(converted)
-        return results
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        batch_futures = [executor.submit(convert_batch, batch) for batch in batches]
-        for future in concurrent.futures.as_completed(batch_futures):
-            try:
-                batch_results = future.result()
-                # Fill the main results list in order
-                # Option 1: If order doesn't matter, just extend
-                # results.extend(batch_results)
-                # Option 2: If you want to keep the original file order, you'll need to track which files were in each batch
-                # For now, just extend:
-                results.extend(batch_results)
-            except Exception as exc:
-                logging.error(f"Exception during batch conversion: {exc}\n{traceback.format_exc()}")
-
     success = sum(1 for r in results if r)
     fail = total - success
     return {"success": success, "fail": fail}

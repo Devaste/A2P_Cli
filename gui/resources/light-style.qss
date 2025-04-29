@@ -1,0 +1,45 @@
+QWidget {
+    background: #f6f7fa;
+    color: #232629;
+}
+
+QLabel {
+    color: #232629;
+}
+
+QLineEdit, QComboBox, QPushButton {
+    background: #fff;
+    color: #232629;
+    border: 1px solid #bbb;
+    border-radius: 3px;
+}
+
+QLineEdit:focus, QComboBox:focus, QPushButton:focus {
+    border: 1.5px solid #3578e5;
+}
+
+QGroupBox {
+    border: 1px solid #bbb;
+    border-radius: 6px;
+    margin-top: 8px;
+    color: #232629;
+}
+
+QGroupBox:title {
+    subcontrol-origin: margin;
+    left: 8px;
+    padding: 0 3px 0 3px;
+}
+
+QProgressBar {
+    background: #e9eaec;
+    border: 1px solid #bbb;
+    border-radius: 5px;
+    text-align: center;
+    color: #232629;
+}
+
+QProgressBar::chunk {
+    background-color: #3578e5;
+    border-radius: 5px;
+}

@@ -1,0 +1,9 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Center circle (stroke color) -->
+  <circle cx="12" cy="12" r="4" stroke="#e0e0e0" stroke-width="1.5"/>
+  <!-- Rays (stroke color) -->
+  <path d="M12 3V5M12 19V21M5 12H3M21 12H19M16.95 7.05L18.36 5.64M16.95 16.95L18.36 18.36M7.05 7.05L5.64 5.64M7.05 16.95L5.64 18.36"
+        stroke="#e0e0e0"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>
