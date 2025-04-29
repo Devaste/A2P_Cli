@@ -24,36 +24,6 @@ def handle_save_logic(args):
         sys.exit(0)
 
 @log_call
-def handle_version_check(args):
-    if args.get('version', False):
-        from logic.update_check import get_local_version
-        print(f"A2P_Cli version: {get_local_version()}")
-        sys.exit(0)
-
-@log_call
-def handle_update_check(args):
-    if args.get('check_update', False):
-        from logic.update_check import get_local_version, get_latest_version, download_and_prepare_update
-        local = get_local_version()
-        latest = get_latest_version()
-        if latest == local:
-            print(f"You are running the latest version: {local}.")
-            sys.exit(0)
-        else:
-            print(f"Update available: {latest} (You have {local})")
-            if args.get('silent', False):
-                print("[Update] Running in silent mode: updating without prompt...")
-                download_and_prepare_update(no_relaunch=True)
-                sys.exit(0)
-            else:
-                resp = input("Would you like to update now? [Y/n]: ").strip().lower()
-                if resp in ('', 'y', 'yes'):
-                    download_and_prepare_update(no_relaunch=True)
-                else:
-                    print("Update skipped.")
-                sys.exit(0)
-
-@log_call
 def handle_bit_check(args):
     input_path = Path(args['input_dir'])
     if input_path.is_file() and args.get('chk_bit', False):
@@ -91,17 +61,11 @@ def run_conversion(args):
 @log_call
 def run():
     mode, args = parse_cli_args()
-    if mode == 'meta':
-        if args.get('version'):
-            from logic.update_check import get_local_version
-            print(f"A2P_Cli version: {get_local_version()}")
-            return
-        elif args.get('check_update'):
-            handle_update_check(args)
-            return
     if mode == 'functional':
         # Functional logic (save/options) can be handled here if needed
-        pass  # Extend as needed
+        handle_save_logic(args)
+        handle_options_logic(args)
+        return
     if mode == 'conversion':
         # Proceed with conversion logic
         args = handle_options_logic(args)

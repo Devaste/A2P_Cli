@@ -3,6 +3,10 @@ import sys
 from pathlib import Path
 
 def get_options_path():
+    """
+    Return the absolute path to the options.ini file for the application.
+    Handles both PyInstaller (frozen) and normal script execution.
+    """
     # Always resolve relative to the main app location, not this file's location
     if hasattr(sys, 'frozen'):
         # PyInstaller or similar
@@ -13,6 +17,10 @@ def get_options_path():
 
 
 def parse_value(val):
+    """
+    Parse a string value from options.ini and convert it to its appropriate type.
+    Handles None, booleans, and ints; returns str otherwise.
+    """
     if val == "None":
         return None
     if val == "True":
@@ -27,7 +35,7 @@ def parse_value(val):
 
 def load_options(section: str) -> dict:
     """
-    Load options from the given section ('TUI' or 'CLI') in the options.ini file.
+    Load options from the given section ('GUI' or 'CLI') in the options.ini file.
     Returns a dict of options, or empty dict if section not present.
     Converts types: 'None'->None, 'True'->True, 'False'->False, ints, else str.
     """
@@ -43,7 +51,7 @@ def load_options(section: str) -> dict:
 
 def save_options(section: str, options: dict):
     """
-    Save the given options dict to the specified section ('TUI' or 'CLI') in options.ini.
+    Save the given options dict to the specified section ('GUI' or 'CLI') in options.ini.
     Overwrites only that section. Does NOT save input_dir/output_dir/log/version/check_update.
     """
     config = configparser.ConfigParser()
@@ -58,6 +66,9 @@ def save_options(section: str, options: dict):
 
 
 def print_options(section: str):
+    """
+    Print all options for the given section ('GUI' or 'CLI') from options.ini to stdout.
+    """
     opts = load_options(section)
     for k, v in opts.items():
         print(f"{k} = {v}")

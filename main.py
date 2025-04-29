@@ -15,7 +15,7 @@ import sys
 def main():
     """
     Entry point for A2P_Cli.
-    Runs TUI if no arguments are given, otherwise runs CLI/script mode.
+    Runs GUI if no arguments are given, otherwise runs CLI/script mode.
     """
     if len(sys.argv) == 1:
         from gui.qt_app import run as main_menu_run

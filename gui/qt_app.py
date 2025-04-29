@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QIcon
-from .qt_main_window import run_main_window
+from .qt_main_window import MainWindow
 import os
 
 def run():
@@ -11,4 +11,6 @@ def run():
     icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'icon.ico'))
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
-    run_main_window()
+    window = MainWindow()
+    window.show()
+    app.exec_()

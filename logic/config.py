@@ -1,3 +1,8 @@
+"""
+This module defines default configuration values, option descriptions, and validators for the A2P_Cli application.
+It is used by both the CLI and GUI to provide consistent defaults and validation.
+"""
+
 # Centralized configuration for A2P_Cli 2.0-beta
 
 # Default values for CLI and GUI options

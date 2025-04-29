@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0/).
 
+## [3.0.0] - 2025-04-29
+
+### Added
+- Comprehensive docstrings and improved documentation throughout the codebase
+- Enhanced README with clear usage, installation, and credits (including special thanks)
+- Acknowledgement of contributors and testers in documentation
+
+### Changed
+- All references to TUI removed; project is now GUI and CLI only
+- Codebase fully cleaned, refactored, and stabilized for final release
+- Improved modularity and maintainability
+- Project structure and comments follow best practices
+
+### Fixed
+- Minor documentation and comment inconsistencies
+- Ensured all linter warnings are resolved
+
+### Final
+- This is the final, stable release of A2P_Cli (3.0.0)
+- No further major changes planned; project is considered complete and production-ready
+
 ## [2.5.0] - 2025-04-29
 
 ### Added
@@ -42,31 +63,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [2.3.0] - 2025-04-27
 ### Changed
-- Updater will not relaunch the app after CLI update (no GUI/TUI launch after CLI update).
-- All updater logs now go only to file, not to the console.
-- Windows update relaunch is now fully detached, no more PowerShell lock or error dialogs.
 - Patch-based updates and clean exit logic improved for all modes.
 
 ## [2.2.0] - 2025-04-27
-### Changed
-- Unified update logic for both GUI and CLI (platform-aware asset selection, direct asset passing, robust fallback).
-- GUI update flow now always uses the correct asset for the running context.
-- User-Agent header added to all GitHub API requests for update checks (GitHub API best practices).
-- Workflow now excludes options.ini and log files from release archives.
-- Project structure and documentation updated for new update mechanism and packaging.
-
 ### Fixed
 - Prevented accidental packaging of local config/log files in source distributions.
 
 ## [2.1.0] - 2025-04-27
 ### Added
 - Robust self-updating mechanism for all deployment types (Windows EXE, Unix binary, Python script).
-- Platform-aware asset selection and extraction during update.
-- CLI: Prompts for update unless --silent is set (auto-updates in silent mode).
-- TUI: Interactive prompt for update if a new version is available.
 
 ### Improved
-- Centralized and simplified update logic for maintainability and reliability.
 - README updated to document update feature and usage.
 
 ### Fixed
@@ -139,11 +146,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [2.2] - 2025-04-23
 ### Added
-- Automatic update check on startup: notifies user if a new version is available on GitHub Releases.
-- Added logic/update_check.py module for robust version comparison and notification.
-
-### Improved
-- Menu refreshes on every menu change for a cleaner CLI experience.
+- Logic/update_check.py module for robust version comparison and notification.
 
 ## [2.1] - 2025-04-23
 ### Improved

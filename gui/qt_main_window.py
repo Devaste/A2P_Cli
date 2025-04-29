@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import (
-    QMainWindow, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QPushButton, QComboBox, QCheckBox, QGroupBox, QFileDialog, QMessageBox, QProgressBar, QStatusBar
 )
 from PyQt5.QtCore import pyqtSignal, Qt, QThread
@@ -9,7 +9,6 @@ import time
 import os
 from logic.convert import convert_avif_to_png
 from logic.config import OPTIONS_DEFAULTS, DEFAULT_MAX_WORKERS
-from logic.update_check import get_local_version, get_latest_version
 from logic.options_io import save_options, load_options
 
 class ConversionThread(QThread):
@@ -176,10 +175,6 @@ class MainWindow(QMainWindow):
         btn_layout = QHBoxLayout()
         self.convert_btn = QPushButton("Convert")
         self.convert_btn.clicked.connect(self._start_conversion)
-        self.version_btn = QPushButton("Version")
-        self.version_btn.clicked.connect(self._show_version)
-        self.update_btn = QPushButton("Check Update")
-        self.update_btn.clicked.connect(self._check_update)
         self.save_btn = QPushButton("Save Options")
         self.save_btn.clicked.connect(self._save_gui_options)
         # --- Theme Switch Button ---
@@ -189,8 +184,6 @@ class MainWindow(QMainWindow):
         self._update_theme_btn_icon()
         self.theme_btn.clicked.connect(self._toggle_theme)
         btn_layout.addWidget(self.convert_btn)
-        btn_layout.addWidget(self.version_btn)
-        btn_layout.addWidget(self.update_btn)
         btn_layout.addWidget(self.save_btn)
         btn_layout.addWidget(self.theme_btn)
         layout.addLayout(btn_layout)
@@ -267,30 +260,6 @@ class MainWindow(QMainWindow):
         QMessageBox.critical(self, "Error", err)
         self.convert_btn.setEnabled(True)
 
-    def _show_version(self):
-        version = get_local_version()
-        QMessageBox.information(self, "Version", f"A2P_Cli version: {version}")
-
-    def _check_update(self):
-        local = get_local_version()
-        latest = get_latest_version()
-        if latest == local:
-            QMessageBox.information(self, "Update", f"You are running the latest version: {local}.")
-        else:
-            from logic.update_check import select_update_asset, get_latest_release_assets, download_and_prepare_update
-            assets = get_latest_release_assets()
-            asset_name, asset_url, asset_type = select_update_asset(assets)
-            if not asset_url:
-                QMessageBox.warning(self, "Update", "No suitable update asset found.")
-                return
-            reply = QMessageBox.question(self, "Update Available", f"Update available: {latest} (You have {local})\nUpdate now?", QMessageBox.Yes | QMessageBox.No)
-            if reply == QMessageBox.Yes:
-                try:
-                    download_and_prepare_update(asset_url=asset_url, asset_name=asset_name, asset_type=asset_type)
-                    QMessageBox.information(self, "Update", "Update complete!")
-                except Exception as e:
-                    QMessageBox.critical(self, "Update Error", str(e))
-
     def _save_gui_options(self):
         opts = self._gather_options()
         opts['theme'] = self.theme
@@ -351,10 +320,3 @@ class MainWindow(QMainWindow):
             self.thread.quit()
             self.thread.wait()
         event.accept()
-
-# Entry point for running the main window (for gui.qt_app to call)
-def run_main_window():
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec_())

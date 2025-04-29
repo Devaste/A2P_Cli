@@ -1,22 +1,69 @@
 # A2P_Cli
 
-**Version:** 2.5.0
+**Version:** 3.0.0 – Final Release
 
-A2P_Cli is a cross-platform image batch converter with a modern PyQt5 GUI and command-line interface. It supports advanced quantization, dithering, and multi-threaded image processing with a focus on usability and performance.
+A2P_Cli is a fast, cross-platform batch image converter with a modern PyQt5 GUI and CLI. It supports AVIF to PNG conversion, advanced quantization and dithering, and multi-threaded processing. Designed for usability, performance, and maintainability.
+
+---
 
 ## Features
 
-- **Batch conversion** of images between formats (e.g., AVIF to PNG)
-- **Quantization**: grayscale, color, and custom options
-- **Dithering**: toggle and method selection
-- **Multi-threaded** processing for speed
-- **Modern PyQt5 GUI** with:
-  - Clean, native look (light/dark themes)
-  - Theme switcher with custom icons (moon/sun)
-  - Responsive, fixed-size layout
-- **Options saved** to `options.ini` and restored on launch
-- **CLI mode** for scripting and automation
-- **Automatic update check** and version display
+- **Batch convert** AVIF images to PNG
+- **Quantization**: Color, grayscale, and grayscale+one with custom bit depth
+- **Dithering**: Toggle and select method
+- **Multi-threaded** for high performance
+- **Modern GUI**:
+  - PyQt5, native look, light/dark themes
+  - Theme switcher with custom icons
+  - Fixed, responsive layout
+- **Options saved** to `options.ini` and auto-restored
+- **CLI mode** for automation and scripting
+- **Cross-platform**: Windows, macOS, Linux
+
+---
+
+## Installation
+
+1. Clone the repository:
+   ```sh
+   git clone https://github.com/yourusername/A2P_Cli.git
+   cd A2P_Cli
+   ```
+2. Install dependencies:
+   ```sh
+   pip install -r requirements.txt
+   ```
+
+---
+
+## Usage
+
+### GUI
+Launch the graphical interface:
+```sh
+python main.py
+```
+
+### CLI
+Run batch conversions via command line:
+```sh
+python main.py --input_dir <input> [--output_dir <output>] [options]
+```
+
+#### Common CLI Options
+- `--input_dir`   Directory containing .avif files (required)
+- `--output_dir`  Directory for output .png files (default: input)
+- `--remove`      Remove original .avif files after conversion
+- `--recursive`   Recursively search subdirectories
+- `--silent`      Minimal output
+- `--qb_color`    Quantization bits for color images (1–8)
+- `--qb_gray_color` Quantization bits for grayscale+one
+- `--qb_gray`     Quantization bits for grayscale
+- `--method`      Quantization method (0=Median Cut, 1=Max Coverage, 2=Fast Octree)
+- `--dither`      Dither (0=None, 1=Floyd-Steinberg)
+- `--max_workers` Number of parallel workers
+
+---
 
 ## Project Structure
 
@@ -25,74 +72,41 @@ A2P_Cli/
 ├── gui/
 │   ├── qt_main_window.py        # Main PyQt5 GUI logic
 │   ├── qt_app.py               # GUI entry point
-│   └── resources/
-│       ├── light-style.qss     # Light theme stylesheet
-│       ├── dark-style.qss      # Dark theme stylesheet
-│       ├── light-style.svg     # Moon icon for light mode
-│       ├── dark-style.svg      # Sun icon for dark mode
-│       └── ...
+│   └── resources/              # Themes & icons
 ├── logic/
-│   └── convert.py              # Image conversion logic
+│   ├── convert.py              # Image conversion logic
+│   ├── config.py, ...
 ├── cli/
-│   ├── args.py                 # CLI argument parsing & help
-│   ├── config.py               # CLI config helpers
-│   ├── script_mode.py          # CLI/script logic
-│   └── ...
-├── main.py                     # Main entry point (CLI/GUI)
+│   ├── args.py, ...            # CLI helpers
+├── main.py                     # Main entry point
 ├── options.ini                 # Saved user options
 ├── requirements.txt            # Python dependencies
 ├── README.md
-├── CHANGELOG.md
 └── ...
 ```
 
-## Usage
+---
 
-- **GUI:**
-  ```sh
-  python main.py
-  ```
-- **CLI:**
-  ```sh
-  python main.py [OPTIONS]
-  ```
+## Best Practices & Design
+- **Modular codebase**: GUI, logic, and CLI are separated
+- **No deprecated code or unused imports**
+- **Docstrings** and comments throughout
+- **Extensible**: Easy to add new formats or features
 
-### CLI Options
-
-```
-usage: main.py [-h] [--input INPUT] [--output OUTPUT] [--remove] [--recursive]
-              [--qb_gray N] [--qb_gray_color N] [--qb_color N]
-              [--method {0,1,2}] [--dither {0,1}] [--max_workers N]
-              [--theme {light,dark}] [--version] [--check-update]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --input INPUT         Input directory
-  --output OUTPUT       Output directory
-  --remove              Remove originals after conversion
-  --recursive           Process directories recursively
-  --qb_gray N           Gray quantization level
-  --qb_gray_color N     Gray+1 quantization level
-  --qb_color N          Color quantization level
-  --method {0,1,2}      Quantization method: 0=Median Cut, 1=Max Coverage, 2=Fast Octree
-  --dither {0,1}        Dither: 0=None, 1=Floyd-Steinberg
-  --max_workers N       Number of worker threads
-  --theme {light,dark}  Preferred theme (GUI only)
-  --version             Show version
-  --check-update        Check for updates
-```
-
-## Configuration
-
-- All settings are saved in `options.ini` (created/updated automatically).
-- Theme preference (light/dark) is saved and restored.
+---
 
 ## License
+MIT License – see [LICENSE](LICENSE)
 
-MIT License
+---
 
-## Credits
+## Acknowledgements
+- [PyQt5](https://www.riverbankcomputing.com/software/pyqt/intro/)
+- [Pillow](https://python-pillow.org/)
+- AVIF plugin: [pillow-avif-plugin](https://github.com/helixy2k/pillow-avif-plugin)
+- **Special thanks to [JNANEU](https://github.com/JNANEU) for the initial project idea and extensive testing**
 
-- Powered by PyQt5 and Pillow.
-- Custom theme and icons: Devaste.
-- Tester: JNANEU
+---
+
+## Final Notes
+This is the final, stable release (3.0.0). For questions or contributions, open an issue or pull request on GitHub.

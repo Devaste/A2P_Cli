@@ -9,7 +9,7 @@ def parse_cli_args():
     Returns:
         tuple: (mode, args_dict), where mode is one of 'meta', 'functional', or 'conversion'.
     Raises:
-        SystemExit: If required arguments are missing or help/version/update is requested.
+        SystemExit: If required arguments are missing or help/version is requested.
     """
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
@@ -20,7 +20,7 @@ def parse_cli_args():
     parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS, help='Show this help message and exit')
 
     # === Mandatory ===
-    parser.add_argument("input_dir", type=str, nargs="?", help="Directory or file to convert (required unless --version or --check-update)")
+    parser.add_argument("input_dir", type=str, nargs="?", help="Directory or file to convert (required unless --version)")
 
     # === Optional (Conversion/Operation Options) ===
     parser.add_argument("--output_dir", type=str, default=None, help="Directory to save .png files (default: same as input)")
@@ -38,16 +38,13 @@ def parse_cli_args():
     # === Functional Options ===
     parser.add_argument("--save", action="store_true", help="Save current CLI options to the [CLI] block in options.ini and exit.")
     parser.add_argument("--options", action="store_true", help="Load CLI options from the [CLI] block in options.ini (overrides other CLI args except input_dir).")
-    parser.add_argument("-v", "--version", action="store_true", help="Show version and exit")
-    parser.add_argument("-u", "--check-update", action="store_true", help="Check for updates and exit")
 
-    args = parser.parse_known_args()
+    args, _ = parser.parse_known_args()
     # Optionally: ignore or log unknown
     args_dict = vars(args)
 
     # Decide mode
-    if args_dict.get('version') or args_dict.get('check_update'):
-        return 'meta', args_dict
+    # Only 'functional' and 'conversion' modes remain
     if args_dict.get('save') or args_dict.get('options'):
         return 'functional', args_dict
     if args.input_dir:
