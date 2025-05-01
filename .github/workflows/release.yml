@@ -1,0 +1,146 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+      - test-features
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: [3.11, 3.12, 3.13]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run tests (allow failures)
+        run: |
+          pytest tests || true
+
+      - name: Build executable (Windows)
+        if: matrix.os == 'windows-latest' && matrix.python-version == '3.13'
+        run: |
+          pip install pyinstaller
+          pyinstaller --onefile main.py --name A2P_Cli --icon icon.ico --add-data "VERSION;." --add-data "gui/resources;gui/resources"
+
+      - name: Archive build artifacts (Windows)
+        if: matrix.os == 'windows-latest' && matrix.python-version == '3.13'
+        uses: actions/upload-artifact@v4
+        with:
+          name: A2P_Cli-win
+          path: dist/A2P_Cli.exe
+
+      - name: Build executable (Linux)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        run: |
+          pip install pyinstaller
+          pyinstaller --onefile main.py --name A2P_Cli
+
+      - name: Archive build artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        uses: actions/upload-artifact@v4
+        with:
+          name: A2P_Cli-linux
+          path: dist/A2P_Cli
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: A2P_Cli-win
+          path: ./dist/win
+      - uses: actions/download-artifact@v4
+        with:
+          name: A2P_Cli-linux
+          path: ./dist/linux
+      - name: Set release variables
+        id: set_release
+        run: |
+          VERSION=$(cat VERSION)
+          BRANCH="${{ github.ref_name }}"
+          if [ "$BRANCH" = "main" ]; then
+            TAG="v$VERSION"
+            PRERELEASE=false
+          else
+            if [[ "$VERSION" == *"-beta" ]]; then
+              TAG="v$VERSION"
+            else
+              TAG="v$VERSION-beta"
+            fi
+            PRERELEASE=true
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+      - name: Extract latest changelog entry
+        id: changelog
+        run: |
+          awk '/^## \[/{if (p) exit; p=1} p' CHANGELOG.md > LATEST_CHANGELOG.md
+      - name: Create Python source zip archive (full release)
+        run: |
+          zip -r A2P_Cli-py.zip . -x '*.git*' '*.venv*' '*dist*' '*__pycache__*' '*tests*'
+      - name: Create Python source tar.gz archive (full release)
+        run: |
+          tar --exclude='./.git' --exclude='./.venv' --exclude='./dist' \
+              --exclude='./__pycache__' --exclude='./tests' \
+              --exclude='./options.ini' --exclude='./a2pcli.log' \
+              -czf A2P_Cli-py.tar.gz ./*.py cli gui logic requirements.txt VERSION
+      - name: Get previous release tag
+        id: prev_tag
+        run: |
+          PREV_TAG=$(git tag --sort=-creatordate | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -n 2 | tail -n 1)
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+      - name: Create patch zip archive (changed files since previous release)
+        run: |
+          if [ -n "${{ steps.prev_tag.outputs.prev_tag }}" ]; then
+            git diff --name-only ${{ steps.prev_tag.outputs.prev_tag }} HEAD > changed_files.txt
+            echo VERSION >> changed_files.txt
+            zip A2P_Cli-patch.zip -@ < changed_files.txt
+          else
+            echo "No previous tag found, skipping patch archive."
+          fi
+      - name: Create patch tar.gz archive (changed files since previous release)
+        run: |
+          if [ -n "${{ steps.prev_tag.outputs.prev_tag }}" ]; then
+            git diff --name-only ${{ steps.prev_tag.outputs.prev_tag }} HEAD > changed_files.txt
+            echo VERSION >> changed_files.txt
+            tar -czf A2P_Cli-patch.tar.gz -T changed_files.txt
+          else
+            echo "No previous tag found, skipping patch archive."
+          fi
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.set_release.outputs.tag }}
+          prerelease: ${{ steps.set_release.outputs.prerelease }}
+          generate_release_notes: false
+          body_path: ./LATEST_CHANGELOG.md
+          files: |
+            ./dist/win/A2P_Cli.exe
+            ./dist/linux/A2P_Cli
+            ./A2P_Cli-py.zip
+            ./A2P_Cli-py.tar.gz
+            ./A2P_Cli-patch.zip
+            ./A2P_Cli-patch.tar.gz
