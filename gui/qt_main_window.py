@@ -155,10 +155,11 @@ class MainWindow(QMainWindow):
                 self.qb_gray_color_combo.currentData() is not None or
                 self.qb_color_combo.currentData() is not None
             )
-            self.method_label.setVisible(any_qb)
-            self.method_combo.setVisible(any_qb)
-            self.dither_label.setVisible(any_qb)
-            self.dither_combo.setVisible(any_qb)
+            # Instead of hiding, disable/enable ("grey out")
+            self.method_label.setEnabled(any_qb)
+            self.method_combo.setEnabled(any_qb)
+            self.dither_label.setEnabled(any_qb)
+            self.dither_combo.setEnabled(any_qb)
             force_resize()
         self.qb_gray_combo.currentIndexChanged.connect(update_method_dither_visibility)
         self.qb_gray_color_combo.currentIndexChanged.connect(update_method_dither_visibility)
